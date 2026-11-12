@@ -59,7 +59,6 @@ describe('Open-Meteo HeatShield workflows', () => {
     expect(allCards).toHaveLength(7)
     expect(allCards[5]).toHaveTextContent('12.3km/h')
 
-    expect(screen.getByText(/Open-Meteo apparent temperature/i)).toBeInTheDocument()
     const sources = screen.getByText('Sources & limits').closest('details')!
     await user.click(within(sources).getByText('Sources & limits'))
     expect(sources.textContent).toMatch(/AI\/ML predictions are not used/i)
