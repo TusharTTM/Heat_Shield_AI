@@ -1,43 +1,29 @@
 import { useCallback, useMemo } from 'react'
 import {
-  AlertTriangle,
   ArrowRight,
   BellRing,
-  BookOpenCheck,
-  Clock3,
-  CloudRain,
+  Check,
   CloudSun,
   Droplets,
-  ExternalLink,
-  Gauge,
-  LineChart,
-  LoaderCircle,
-  Map as MapIcon,
+  FileText,
+  Flame,
+  MapPin,
   RefreshCw,
-  ShieldAlert,
-  Siren,
-  Sparkles,
+  ShieldCheck,
   Sun,
   Thermometer,
-  ThermometerSun,
   Wind,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { ActionChecklistCard, PreparednessProgressCard } from '../components/DashboardActionCards'
-import { IndiaRiskScene3D } from '../components/IndiaRiskScene3D'
+import { CityPicker } from '../components/CityPicker'
 import { OfficialAirQualityPanel } from '../components/OfficialAirQualityPanel'
 import { OfficialAlertsPanel } from '../components/OfficialAlertsPanel'
 import {
   AirQualitySourceNote,
-  Card,
-  CardHeader,
+  DemoBanner,
   formatWeatherTime,
-  InlineNotice,
-  PageHeader,
   RiskBadge,
   StatusBadge,
-  WeatherError,
-  WeatherLoading,
   WeatherSourceNote,
 } from '../components/ui'
 import { useApp } from '../context/AppContext'
@@ -48,9 +34,7 @@ import {
   getIstDateKey,
   selectPrimaryRiskSummary,
 } from '../data/dashboardTasks'
-import { riskRecommendations } from '../data/guidance'
-import { assessAirQuality, assessHeat, europeanAqiCategory, upcomingHazards, usAqiCategory } from '../data/hazards'
-import { getSimpleRisk } from '../data/heat'
+import { assessAirQuality, assessHeat, europeanAqiCategory, usAqiCategory } from '../data/hazards'
 import { getRegion } from '../data/regions'
 import { useLocalStorage } from '../hooks/useLocalStorage'
 import { useOfficialAirQuality, useOfficialAlerts } from '../hooks/useOfficialData'
@@ -76,537 +60,269 @@ export default function Dashboard() {
 
   const officialAlerts = useOfficialAlerts(region)
   const officialAirQuality = useOfficialAirQuality(region)
-
-  const anyReady = status === 'ready' || airStatus === 'ready'
-  const anyLoading = status === 'loading' || airStatus === 'loading'
-  const anyStale = freshness === 'stale' || airFreshness === 'stale'
-
-  const primaryRisk = useMemo(
-    () =>
-      selectPrimaryRiskSummary({
-        weather,
-        air: airQuality,
-        weatherStatus: status,
-        airStatus,
-        officialAlerts,
-      }),
-    [airQuality, airStatus, officialAlerts, status, weather],
-  )
-  const officialWarningLabel = primaryRisk.officialSummary.status === 'active-warning'
-    ? primaryRisk.officialSummary.headline
-    : primaryRisk.officialSummary.status === 'checked-none'
-      ? primaryRisk.officialSummary.headline.includes('partial area coverage') ? 'Checked · partial coverage' : 'No matched alerts'
-      : primaryRisk.officialSummary.status === 'unconfigured'
-        ? 'Not connected'
-        : primaryRisk.officialSummary.status === 'unavailable'
-          ? 'Feed unavailable'
-          : 'Checking…'
+  const primaryRisk = useMemo(() => selectPrimaryRiskSummary({
+    weather,
+    air: airQuality,
+    weatherStatus: status,
+    airStatus,
+    officialAlerts,
+  }), [airQuality, airStatus, officialAlerts, status, weather])
 
   const heat = weather ? assessHeat(weather) : null
   const airAssessment = airQuality ? assessAirQuality(airQuality) : null
-
-  // US AQI leads when it is available; otherwise the European index takes its
-  // place. Whichever leads is printed once as the metric, and the other becomes
-  // the supporting text — so neither index is stated twice in the same card.
   const primaryAqi = airQuality?.usAqi != null
-    ? { label: 'US AQI', value: airQuality.usAqi.toFixed(0), category: usAqiCategory(airQuality.usAqi) }
+    ? { label: 'US AQI', value: airQuality.usAqi, category: usAqiCategory(airQuality.usAqi) }
     : airQuality?.europeanAqi != null
-      ? { label: 'European AQI', value: airQuality.europeanAqi.toFixed(0), category: europeanAqiCategory(airQuality.europeanAqi) }
-      : null
-  const secondaryAqi = airQuality?.usAqi != null && airQuality.europeanAqi != null
-    ? { label: 'European AQI', value: airQuality.europeanAqi.toFixed(0), category: europeanAqiCategory(airQuality.europeanAqi) }
-    : null
-  const upcoming = upcomingHazards(weather, airQuality)
-  const simpleHeatRisk = weather ? getSimpleRisk(weather.risk) : null
-  const rain = weather ? weather.rain ?? weather.precipitation ?? null : null
-  const hottestHour =
-    weather && weather.hours.length > 0
-      ? weather.hours.reduce((hottest, hour) => (hour.temperature > hottest.temperature ? hour : hottest))
+      ? { label: 'European AQI', value: airQuality.europeanAqi, category: europeanAqiCategory(airQuality.europeanAqi) }
       : null
   const today = weather?.forecast[0]
+  const latestOfficialAlert = officialAlerts.data?.alerts[0]
 
-  const suggestions = useMemo(
-    () => buildDashboardSuggestions(weather, airQuality),
-    [airQuality, weather],
-  )
-
-  const istDateKey = getIstDateKey()
-  const storageScope = `${istDateKey}:${region}`
+  const suggestions = useMemo(() => buildDashboardSuggestions(weather, airQuality), [airQuality, weather])
+  const storageScope = `${getIstDateKey()}:${region}`
   const [completionStore, setCompletionStore] = useLocalStorage<TaskCompletionStore>('hs-dashboard-tasks-v1', {})
   const completedIds = completionStore[storageScope] ?? []
+  const progress = useMemo(() => computePreparednessProgress(suggestions, completedIds), [completedIds, suggestions])
 
-  const toggleTask = useCallback(
-    (taskId: string) => {
-      setCompletionStore((prev) => {
-        const current = prev[storageScope] ?? []
-        const exists = current.includes(taskId)
-        const nextList = exists ? current.filter((id) => id !== taskId) : [...current, taskId]
-        return { ...prev, [storageScope]: nextList }
-      })
-    },
-    [setCompletionStore, storageScope],
-  )
-
-  const resetTasks = useCallback(() => {
-    setCompletionStore((prev) => ({ ...prev, [storageScope]: [] }))
+  const toggleTask = useCallback((taskId: string) => {
+    setCompletionStore((previous) => {
+      const current = previous[storageScope] ?? []
+      const next = current.includes(taskId) ? current.filter((id) => id !== taskId) : [...current, taskId]
+      return { ...previous, [storageScope]: next }
+    })
   }, [setCompletionStore, storageScope])
 
-  const progress = useMemo(
-    () => computePreparednessProgress(suggestions, completedIds),
-    [completedIds, suggestions],
-  )
+  const resetTasks = useCallback(() => {
+    setCompletionStore((previous) => ({ ...previous, [storageScope]: [] }))
+  }, [setCompletionStore, storageScope])
 
-  const headerActions = (
-    <div className="page-action-group">
-      <StatusBadge status={anyStale && anyReady ? 'stale' : anyReady ? 'weather-model' : anyLoading ? 'loading' : 'unavailable'}>
-        {!anyStale && anyReady ? 'Weather + air models' : undefined}
-      </StatusBadge>
-      <button
-        type="button"
-        className="icon-text-button"
-        onClick={refresh}
-        disabled={status === 'loading' || airStatus === 'loading'}
-      >
-        <RefreshCw size={14} aria-hidden="true" />
-        <span>Refresh</span>
-      </button>
-    </div>
-  )
+  const modelStatus = status === 'loading' || airStatus === 'loading'
+    ? 'Loading current readings'
+    : status === 'error' && airStatus === 'error'
+      ? 'Models unavailable'
+      : 'Weather + air models'
 
   return (
-    <div className="page home-page">
-      {/* On this screen the verdict outranks the page title, so the title is the
-          place and the verdict is the headline. The h1 keeps its exact wording;
-          the description is the one line a person needs before acting. */}
-      <PageHeader
-        title={`Environmental dashboard for ${weather?.name ?? selected.name}`}
-        description="Model screening for heat and air quality, with the precautions that follow from it."
-        actions={headerActions}
-      />
+    <div className="uploaded-dashboard">
+      <h1 className="sr-only">Environmental dashboard for {weather?.name ?? selected.name}</h1>
 
-      {warning && weather && (
-        <InlineNotice kind="warning" title="Showing cached weather">
-          {warning} Last updated {new Date(weather.retrievedAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} IST.
-        </InlineNotice>
+      <div className="dashboard-location-row">
+        <div className="dashboard-location-label">
+          <MapPin size={16} aria-hidden="true" />
+          <span>City selection</span>
+        </div>
+        <CityPicker />
+        <StatusBadge status={freshness === 'stale' || airFreshness === 'stale' ? 'stale' : status === 'ready' || airStatus === 'ready' ? 'weather-model' : status === 'loading' || airStatus === 'loading' ? 'loading' : 'unavailable'}>
+          {modelStatus}
+        </StatusBadge>
+        <button
+          type="button"
+          className="dashboard-refresh"
+          onClick={refresh}
+          disabled={status === 'loading' || airStatus === 'loading'}
+          aria-label="Refresh weather and air quality"
+        >
+          <RefreshCw size={16} aria-hidden="true" />
+          <span>Refresh</span>
+        </button>
+      </div>
+
+      {(warning || airWarning) && (
+        <p className="dashboard-stale-note" role="status">
+          {warning ?? airWarning} Showing the most recently available model readings.
+        </p>
       )}
-      {airWarning && airQuality && (
-        <InlineNotice kind="warning" title="Showing cached air quality">
-          {airWarning} Values remain CAMS model estimates, not station observations.
-        </InlineNotice>
+      {(error || airError) && !weather && !airQuality && (
+        <p className="dashboard-stale-note" role="status">
+          {error ?? airError} Readings will appear here when the model feed is available.
+        </p>
       )}
 
-      {/* 1. Current warning and risk */}
       <section
-        className={`overall-screening dashboard-warning-hero risk-${primaryRisk.level ?? 'unavailable'}`}
+        className={`uploaded-alert risk-${primaryRisk.level ?? 'unavailable'}`}
+        aria-label="Official warnings versus model screening"
         aria-labelledby="overall-screening-title"
       >
-        <div className="warning-hero-top">
-          <div className="overall-screening-main">
-            <span className="overall-screening-icon">
-              <Gauge size={26} aria-hidden="true" />
-            </span>
-            <div>
-              <span className="section-label">
-                {selected.name}, {selected.state} · {primaryRisk.hazardLabel}
-              </span>
-              <div className="warning-hero-title-row">
-                <span className="warning-hero-scale-label">HeatShield screening</span>
-                <h2 id="overall-screening-title">{primaryRisk.bannerLabel}</h2>
-                {primaryRisk.level && <RiskBadge level={primaryRisk.level} />}
-              </div>
-              <p className="warning-hero-reason">{primaryRisk.shortReason}</p>
-              <details className="warning-scale-explainer">
-                <summary>How Low / Moderate / High / Extreme are decided</summary>
-                {/* The four bands are HeatShield's own. Each published scale maps
-                    onto them, so the original category name travels beside the
-                    band: US AQI "Good" and European AQI "Good" are both Low, but
-                    "Unhealthy for Sensitive Groups" is where the two diverge. */}
-                <div className="decoder-scale-grid" aria-label="Four-level screening scale decoder">
-                  <div className="decoder-scale-item risk-low">
-                    <RiskBadge level="low" />
-                    <strong>Low</strong>
-                    <p>Heat index below 27 °C · US AQI 0–50 (<em>Good</em>) · European AQI 0–40 (<em>Good</em>)</p>
-                  </div>
-                  <div className="decoder-scale-item risk-moderate">
-                    <RiskBadge level="moderate" />
-                    <strong>Moderate</strong>
-                    <p>Heat index 27 to below 33 °C · US AQI 51–150 (<em>Moderate</em> to <em>Unhealthy for Sensitive Groups</em>) · European AQI 41–60 (<em>Fair</em> to <em>Moderate</em>)</p>
-                  </div>
-                  <div className="decoder-scale-item risk-high">
-                    <RiskBadge level="high" />
-                    <strong>High</strong>
-                    <p>Heat index 33 to below 52 °C · US AQI 151–200 (<em>Unhealthy</em>) · European AQI 61–80 (<em>Poor</em>)</p>
-                  </div>
-                  <div className="decoder-scale-item risk-extreme">
-                    <RiskBadge level="extreme" />
-                    <strong>Extreme</strong>
-                    <p>Heat index 52 °C and above · US AQI above 200 (<em>Very Unhealthy</em> or <em>Hazardous</em>) · European AQI above 80 (<em>Very Poor</em> or <em>Extremely Poor</em>)</p>
-                  </div>
-                </div>
-                <p className="screening-disclaimer">
-                  These are HeatShield’s own screening bands, applied to deterministic heat-index and modelled US/European
-                  AQI results. The bracketed words are each scale’s own category and are kept so you can match them to an
-                  official source. The bands are <strong>not</strong> official disaster warnings, CAP severity levels, or
-                  prediction probabilities — an official NDMA/IMD warning always takes priority.
-                </p>
-              </details>
-              {primaryRisk.missingNotice && primaryRisk.level !== null && (
-                <p className="warning-hero-missing">
-                  <AlertTriangle size={14} aria-hidden="true" />
-                  <span>{primaryRisk.missingNotice}</span>
-                </p>
-              )}
-            </div>
+        <div className="uploaded-alert-heading">
+          <div>
+            <span className="uploaded-eyebrow"><BellRing size={15} aria-hidden="true" />Situation alert · {selected.name}, {selected.state}</span>
+            <h2 id="overall-screening-title">
+              {latestOfficialAlert ? 'Official warning active' : primaryRisk.bannerLabel}
+            </h2>
           </div>
-
-          <div className="warning-hero-meta">
-            <span className="warning-updated-pill">
-              <Clock3 size={14} aria-hidden="true" />
-              {primaryRisk.updatedAt ? (
-                <span>
-                  Updated <time dateTime={primaryRisk.updatedAt}>{formatWeatherTime(primaryRisk.updatedAt)} IST</time>
-                </span>
-              ) : (
-                <span>Update time pending</span>
-              )}
-            </span>
-            <Link to="/monitor" className="text-link">
-              Full hazard breakdown <ArrowRight size={15} aria-hidden="true" />
-            </Link>
-          </div>
+          {primaryRisk.level && <RiskBadge level={primaryRisk.level} />}
         </div>
-
-        {/* Explicit Official Government Warnings vs. HeatShield Screening distinction */}
-        <div className="warning-source-split" aria-label="Official warnings versus model screening">
-          <div className={`warning-source-chip official-${primaryRisk.officialSummary.status}`}>
-            <ShieldAlert size={16} aria-hidden="true" />
-            <div>
-              <strong>Official government warnings: {officialWarningLabel}</strong>
-              {primaryRisk.officialSummary.status === 'active-warning'
-                ? <span>{primaryRisk.officialSummary.detail}</span>
-                : <details className="source-note-detail warning-source-detail">
-                  <summary>Coverage &amp; source details</summary>
-                  <p><strong>{primaryRisk.officialSummary.headline}.</strong> {primaryRisk.officialSummary.detail} Official warnings come from the NDMA SACHET CAP feed and are separate from model screening.</p>
-                </details>}
-            </div>
-            {primaryRisk.officialSummary.status === 'active-warning' ? (
-              <Link to="/alerts" className="chip-link">
-                View CAP alert <ArrowRight size={13} aria-hidden="true" />
-              </Link>
-            ) : (
-              <a href="https://sachet.ndma.gov.in/" rel="external" className="chip-link">
-                SACHET <ExternalLink size={13} aria-hidden="true" />
-              </a>
-            )}
-          </div>
-
-          <div className="warning-source-chip model-screening">
-            <Sparkles size={16} aria-hidden="true" />
-            <div>
-              <strong>HeatShield model screening</strong>
-              <span>Heat and air-quality estimates, assessed with published rules.</span>
-              <details className="source-note-detail warning-source-detail">
-                <summary>How screening works</summary>
-                <p>Open-Meteo weather and CAMS air-quality estimates use deterministic heat-index and US/European AQI rules. They are not official alerts, physical sensor readings, CPCB station observations, or AI/ML predictions.</p>
-              </details>
-            </div>
-          </div>
+        <p className="uploaded-alert-summary">
+          {latestOfficialAlert
+            ? latestOfficialAlert.headline ?? latestOfficialAlert.event ?? primaryRisk.shortReason
+            : primaryRisk.shortReason}
+        </p>
+        <div className="uploaded-alert-footer">
+          <span>{primaryRisk.officialSummary.headline}</span>
+          <Link to="/alerts">Review alerts <ArrowRight size={14} aria-hidden="true" /></Link>
         </div>
       </section>
 
-      {status === 'loading' && !weather && <WeatherLoading name={selected.name} />}
-      {status === 'error' && !weather && <WeatherError name={selected.name} error={error} onRetry={refresh} />}
-      {airStatus === 'error' && !airQuality && (
-        <InlineNotice kind="warning" title="Air quality unavailable">
-          {airError ?? 'The CAMS air-quality model could not be reached.'} No AQI substitute is shown; available weather screening remains independent.
-        </InlineNotice>
-      )}
-
-      {/* 2. Suggested actions and checklist — first content after the warning on every width.
-          3. Interactive 3D risk view. 4. Gamified preparedness progress. */}
-      <div className="dashboard-workspace-grid">
-        <div className="dashboard-action-column">
-          <ActionChecklistCard
-            cityName={selected.name}
-            tasks={suggestions}
-            completedIds={completedIds}
-            onToggleTask={toggleTask}
-            onResetTasks={resetTasks}
-            loading={status === 'loading' && !weather}
-          />
-          <PreparednessProgressCard cityName={selected.name} progress={progress} />
+      <section className="uploaded-dashboard-section" aria-labelledby="dashboard-readings-title">
+        <div className="uploaded-section-heading">
+          <div>
+            <span className="uploaded-eyebrow">Current conditions</span>
+            <h2 id="dashboard-readings-title">Heat and air quality</h2>
+          </div>
+          <span className="uploaded-model-time">
+            {weather ? `Updated ${formatWeatherTime(weather.retrievedAt)} IST` : 'Waiting for current readings'}
+          </span>
         </div>
 
-        <IndiaRiskScene3D
-          selectedWeather={weather}
-          selectedAir={airQuality}
-          selectedWeatherFreshness={freshness}
-          selectedAirFreshness={airFreshness}
-        />
+        <div className="uploaded-metrics-grid key-readings-grid" aria-label="Key environmental readings">
+          <MetricCard icon={Thermometer} title="Temperature" value={weather ? weather.temperature.toFixed(1) : '—'} unit={weather ? '°C' : undefined} detail="Model air temperature" destination="/monitor" />
+          <MetricCard icon={Flame} title="Heat index" value={weather ? weather.heatIndex.toFixed(1) : '—'} unit={weather ? '°C' : undefined} detail={weather ? `Feels like ${weather.apparentTemperature.toFixed(1)}°C` : 'Not assessed'} destination="/monitor" risk={heat?.level} />
+          <MetricCard icon={Droplets} title="Humidity" value={weather ? String(weather.humidity) : '—'} unit={weather ? '%' : undefined} detail="Relative humidity" destination="/monitor" />
+          <MetricCard icon={Sun} title="UV index" value={today?.uvIndexMax == null ? '—' : today.uvIndexMax.toFixed(1)} unit={today?.uvIndexMax == null ? undefined : 'today max'} detail="Daily forecast maximum" destination="/forecast" />
+          <MetricCard
+            icon={Wind}
+            title="Air quality"
+            value={primaryAqi ? primaryAqi.value.toFixed(0) : airStatus === 'loading' ? '…' : '—'}
+            unit={primaryAqi?.label}
+            detail={primaryAqi ? `${primaryAqi.category} · CAMS model` : airAssessment ? 'Modelled AQI unavailable' : 'Not assessed'}
+            destination="/monitor"
+            risk={airAssessment?.level}
+          />
+          <MetricLink icon={ShieldCheck} title="Heat risk" value={heat ? heat.level : 'Unassessed'} detail={heat ? 'Heat-index screening' : 'Waiting for weather'} destination="/monitor" risk={heat?.level} />
+          <MetricLink icon={FileText} title="Reports" value={officialAlerts.status === 'ready' ? String(officialAlerts.data?.count ?? 0) : '—'} detail={officialAlerts.status === 'ready' ? 'Official local warnings' : 'Official feed status'} destination="/alerts" />
+          <MetricLink icon={CloudSun} title="Safety guide" value="Open" detail="Precautions for this location" destination="/safety" />
+        </div>
+      </section>
+
+      <div className="uploaded-dashboard-lower-grid">
+        <section className="uploaded-panel" aria-labelledby="dashboard-suggestions-title">
+          <div className="uploaded-panel-heading">
+            <div>
+              <span className="uploaded-eyebrow">Based on current screening</span>
+              <h2 id="dashboard-suggestions-title">Safety suggestions</h2>
+            </div>
+            <Link to="/safety" aria-label="Open the full Safety Guide"><ArrowRight size={18} aria-hidden="true" /></Link>
+          </div>
+          {suggestions.length > 0 ? (
+            <ul className="uploaded-suggestion-list" aria-label={`Suggested preparedness tasks for ${selected.name}`}>
+              {suggestions.slice(0, 3).map((task) => {
+                const completed = completedIds.includes(task.id)
+                return <li key={task.id} className={completed ? 'completed' : ''}>
+                  <label>
+                    <input type="checkbox" checked={completed} onChange={() => toggleTask(task.id)} />
+                    <span className="uploaded-checkmark" aria-hidden="true"><Check size={14} /></span>
+                    <span className="uploaded-suggestion-title">{task.title}</span>
+                  </label>
+                  <details>
+                    <summary>Why this helps</summary>
+                    <p>{task.detail}</p>
+                  </details>
+                </li>
+              })}
+            </ul>
+          ) : <p className="uploaded-empty-copy">Safety suggestions will appear when conditions are assessed.</p>}
+          <p className="uploaded-panel-footnote">Rule-based precautions from the current weather and air-quality screening.</p>
+        </section>
+
+        <section className="uploaded-panel mission-panel" aria-labelledby="dashboard-progress-title">
+          <div className="uploaded-panel-heading">
+            <div>
+              <span className="uploaded-eyebrow">Your daily checklist</span>
+              <h2 id="dashboard-progress-title">Heat mission progress</h2>
+            </div>
+            {completedIds.length > 0 && <button type="button" className="dashboard-reset" onClick={resetTasks}>Reset</button>}
+          </div>
+          <div className="mission-progress-copy">
+            <strong>{progress.completedCount}<span>/{progress.totalCount}</span></strong>
+            <p>{progress.completedCount === progress.totalCount && progress.totalCount > 0 ? 'Daily plan complete' : 'precautions completed today'}</p>
+          </div>
+          <progress value={progress.percent} max={100} aria-label={`Heat mission progress: ${progress.percent}%`} />
+          <div className="mission-progress-footer">
+            <span>{progress.percent}% complete</span>
+            <Link to="/safety">View safety guide <ArrowRight size={14} aria-hidden="true" /></Link>
+          </div>
+          <p className="uploaded-panel-footnote">Checking off a precaution does not change the reported heat or air-quality risk.</p>
+        </section>
       </div>
 
-      {/* 6. A few key readings that explain the warning and suggested actions */}
-      {weather ? (
-        <section className="key-readings-section" aria-labelledby="key-readings-heading">
-          <div className="key-readings-header">
-            <div>
-              <span className="section-label">Key measurements</span>
-              <h2 id="key-readings-heading">Readings behind today’s screening</h2>
-            </div>
-            {simpleHeatRisk && <span className="sr-only recommendation-text">{riskRecommendations[simpleHeatRisk]}</span>}
-          </div>
-
-          <div className="weather-grid key-readings-grid" aria-label="Key environmental readings">
-            <article className="weather-card">
-              <div className="weather-card-label">
-                <Thermometer size={20} aria-hidden="true" />
-                <h3>Temperature</h3>
-              </div>
-              <strong className="metric-value">
-                {weather.temperature.toFixed(1)}
-                <span>°C</span>
-              </strong>
-              <p>Open-Meteo air temperature (2 m)</p>
-            </article>
-
-            <article className="weather-card">
-              <div className="weather-card-label">
-                <ThermometerSun size={20} aria-hidden="true" />
-                <h3>Heat index</h3>
-              </div>
-              <strong className="metric-value">
-                {weather.heatIndex.toFixed(1)}
-                <span>°C</span>
-              </strong>
-              <p>Feels like {weather.apparentTemperature.toFixed(1)}°C · model estimate</p>
-            </article>
-
-            <article className="weather-card">
-              <div className="weather-card-label">
-                <Droplets size={20} aria-hidden="true" />
-                <h3>Humidity</h3>
-              </div>
-              <strong className="metric-value">
-                {weather.humidity}
-                <span>%</span>
-              </strong>
-              <p>Relative humidity · drives humid heat stress</p>
-            </article>
-
-            <article className="weather-card">
-              <div className="weather-card-label">
-                <Sun size={20} aria-hidden="true" />
-                <h3>UV index</h3>
-              </div>
-              <strong className="metric-value">
-                {today?.uvIndexMax == null ? '—' : today.uvIndexMax.toFixed(1)}
-                {today?.uvIndexMax != null && <span>today max</span>}
-              </strong>
-              <p>Open-Meteo daily maximum · forecast estimate</p>
-            </article>
-
-            <article className={`weather-card air-quality-card${airAssessment ? ` risk-${airAssessment.level}` : ''}`}>
-              <div className="weather-card-label">
-                <Wind size={20} aria-hidden="true" />
-                <h3>Air quality</h3>
-              </div>
-              {airStatus === 'loading' ? (
-                <>
-                  <strong className="metric-value">
-                    <LoaderCircle className="weather-spinner" size={28} aria-label="Loading air quality" />
-                  </strong>
-                  <p>Requesting CAMS US + European AQI…</p>
-                </>
-              ) : airQuality && airAssessment ? (
-                <>
-                  {/* The index printed as the metric is not printed again below it.
-                      The supporting line carries the other index and both category
-                      names, so US and European AQI stay visible side by side. */}
-                  <strong className="metric-value">
-                    {primaryAqi?.value ?? '—'}
-                    <span>{primaryAqi?.label}</span>
-                  </strong>
-                  <p>
-                    {primaryAqi?.category}
-                    {secondaryAqi ? ` · ${secondaryAqi.label} ${secondaryAqi.value} (${secondaryAqi.category})` : ''}
-                    {' · CAMS model, not CPCB'}
-                  </p>
-                </>
-              ) : (
-                <>
-                  <strong className="metric-value">—</strong>
-                  <p>Modelled AQI unavailable · no station substitute</p>
-                </>
-              )}
-            </article>
-          </div>
-        </section>
-      ) : airQuality && airAssessment ? (
-        <Card className="air-only-reading-card">
-          <div className="weather-card-label">
-            <Wind size={20} aria-hidden="true" />
-            <h3>Modelled air quality ({selected.name})</h3>
-          </div>
-          {/* Only the index that could not lead is named here, so the value is
-              stated once whether or not weather loaded. */}
-          <p className="muted-copy">
-            <strong>{primaryAqi ? `${primaryAqi.label} ${primaryAqi.value} · ${primaryAqi.category}${secondaryAqi ? ` · ${secondaryAqi.label} ${secondaryAqi.value} (${secondaryAqi.category})` : ''}` : 'Modelled AQI unavailable'}</strong>
-            {' '}(CAMS model estimate, not physical CPCB stations). Weather readings are currently unavailable.
-          </p>
-        </Card>
-      ) : null}
-
-      {/* Progressive disclosure for secondary measurements, daytime hours, upcoming signals, official panels & provenance */}
-      <details className="card decoder-drawer secondary-details-drawer">
+      <details className="uploaded-sources secondary-details-drawer">
         <summary>More measurements, daytime hours, official feed status &amp; source details</summary>
-        <div className="decoder-drawer-body">
-          {heat && <p className="risk-explanation">{heat.explanation}</p>}
-
-          {weather && (
-            <div className="secondary-metrics-grid" aria-label="Secondary weather measurements">
-              <article className="weather-card secondary-weather-card">
-                <div className="weather-card-label">
-                  <Wind size={20} aria-hidden="true" />
-                  <h3>Wind speed</h3>
-                </div>
-                <strong className="metric-value">
-                  {weather.windSpeed.toFixed(1)}
-                  <span>km/h</span>
-                </strong>
-                <p>
-                  {weather.windGusts != null
-                    ? `Gusts ${weather.windGusts.toFixed(1)} km/h · model estimate`
-                    : 'Gust estimate unavailable'}
-                </p>
-              </article>
-
-              <article className="weather-card secondary-weather-card">
-                <div className="weather-card-label">
-                  <CloudRain size={20} aria-hidden="true" />
-                  <h3>Rainfall</h3>
-                </div>
-                <strong className="metric-value">
-                  {rain === null ? '—' : rain.toFixed(1)}
-                  <span>{rain === null ? '' : 'mm'}</span>
-                </strong>
-                <p>
-                  {rain === null
-                    ? 'Current rain estimate unavailable'
-                    : `${weather.rain !== null && weather.rain !== undefined ? 'Rain' : 'Precipitation'} in the preceding hour · model estimate`}
-                </p>
-              </article>
-            </div>
-          )}
-
-          {weather && today && (
-            <Card className="today-card secondary-subcard">
-              <CardHeader
-                title="Today's model temperatures"
-                subtitle={`${today.fullLabel} · ${today.condition} · High ${today.max.toFixed(1)}°C · Low ${today.min.toFixed(1)}°C`}
-                icon={<CloudSun size={22} aria-hidden="true" />}
-              />
-              {weather.hours.length > 0 ? (
-                <div className="hour-grid">
-                  {weather.hours.map((hour) => (
-                    <div className="hour-item" key={hour.time}>
-                      <span>{hour.time}</span>
-                      <strong>{hour.temperature.toFixed(1)}°</strong>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p>Hourly model temperatures are unavailable for today.</p>
-              )}
-              {hottestHour && (
-                <p className="peak-note">
-                  <Clock3 size={16} aria-hidden="true" />
-                  Warmest listed hour: {hottestHour.time} in this weather model.
-                </p>
-              )}
-            </Card>
-          )}
-
-          <Card className="upcoming-card secondary-subcard">
-            <CardHeader
-              title="Upcoming potential hazards"
-              subtitle="Raised heat (≥33°C heat index) and air-quality forecast signals"
-              icon={<CloudSun size={22} aria-hidden="true" />}
-            />
-            {upcoming.length > 0 ? (
-              <div className="upcoming-list">
-                {upcoming.map((hazard) => (
-                  <article key={hazard.id} className="upcoming-item">
-                    <div>
-                      <h3>{hazard.title}</h3>
-                      <RiskBadge level={hazard.level} subtle />
-                    </div>
-                    <p>{hazard.detail}</p>
-                    <small>{hazard.source}</small>
-                  </article>
-                ))}
-              </div>
-            ) : (
-              <p className="muted-copy">
-                {anyReady
-                  ? 'No raised heat or modelled-AQI signal appears in the available forecast. Rainfall, flood, cyclone, lightning, and drought risks are not assessed by this rule set.'
-                  : 'Forecast signals are unavailable until environmental data loads.'}
-              </p>
-            )}
-          </Card>
-
-          <div className="dashboard-signal-grid">
+        <div className="uploaded-sources-content">
+          {weather && <div className="secondary-metrics-grid">
+            <article className="weather-card secondary-weather-card">
+              <h3>Wind speed</h3>
+              <strong className="metric-value">{weather.windSpeed.toFixed(1)}<span>km/h</span></strong>
+              <p>{weather.windGusts == null ? 'Wind gust estimate unavailable' : `Gusts ${weather.windGusts.toFixed(1)} km/h · model estimate`}</p>
+            </article>
+            <article className="weather-card secondary-weather-card">
+              <h3>Rainfall</h3>
+              <strong className="metric-value">{weather.rain == null ? '—' : weather.rain.toFixed(1)}<span>{weather.rain == null ? '' : 'mm'}</span></strong>
+              <p>Current model estimate</p>
+            </article>
+          </div>}
+          {weather && <div className="hour-grid" aria-label="Today's model temperatures">
+            {weather.hours.map((hour) => <div className="hour-item" key={hour.time}><span>{hour.time}</span><strong>{hour.temperature.toFixed(1)}°</strong></div>)}
+          </div>}
+          <div className="dashboard-official-panels">
             <OfficialAlertsPanel state={officialAlerts} compact />
             <OfficialAirQualityPanel state={officialAirQuality} />
           </div>
-
           {weather && <WeatherSourceNote weather={weather} freshness={freshness} />}
           {airQuality && <AirQualitySourceNote air={airQuality} freshness={airFreshness} />}
+          <DemoBanner />
+          <nav className="dashboard-secondary-navigation" aria-label="Supporting detail pages">
+            <Link to="/monitor">Disaster Monitor</Link>
+            <Link to="/forecast">5-Day Forecast</Link>
+            <Link to="/maps">Risk Map</Link>
+          </nav>
         </div>
       </details>
-
-      {/* Supporting pages strip */}
-      <nav className="supporting-pages-strip" aria-label="Supporting detail pages">
-        <Link to="/monitor" className="supporting-page-link">
-          <Siren size={18} aria-hidden="true" />
-          <div>
-            <strong>Disaster Monitor</strong>
-            <span>5 heat &amp; 8 air-quality metrics, 24h chart, hazard limits</span>
-          </div>
-          <ArrowRight size={15} aria-hidden="true" />
-        </Link>
-        <Link to="/forecast" className="supporting-page-link">
-          <LineChart size={18} aria-hidden="true" />
-          <div>
-            <strong>5-Day Forecast</strong>
-            <span>Daily highs/lows, rain chance &amp; UV</span>
-          </div>
-          <ArrowRight size={15} aria-hidden="true" />
-        </Link>
-        <Link to="/maps" className="supporting-page-link">
-          <MapIcon size={18} aria-hidden="true" />
-          <div>
-            <strong>Risk Map</strong>
-            <span>Full 2D map &amp; 15-city table</span>
-          </div>
-          <ArrowRight size={15} aria-hidden="true" />
-        </Link>
-        <Link to="/alerts" className="supporting-page-link">
-          <BellRing size={18} aria-hidden="true" />
-          <div>
-            <strong>Alerts</strong>
-            <span>SACHET CAP &amp; browser notices</span>
-          </div>
-          <ArrowRight size={15} aria-hidden="true" />
-        </Link>
-        <Link to="/safety" className="supporting-page-link">
-          <BookOpenCheck size={18} aria-hidden="true" />
-          <div>
-            <strong>Safety Guide</strong>
-            <span>Scale tables, checklists &amp; 112 help</span>
-          </div>
-          <ArrowRight size={15} aria-hidden="true" />
-        </Link>
-      </nav>
     </div>
   )
+}
+
+function MetricCard({
+  icon: Icon,
+  title,
+  value,
+  unit,
+  detail,
+  destination,
+  risk,
+}: {
+  icon: typeof Thermometer
+  title: string
+  value: string
+  unit?: string
+  detail: string
+  destination: string
+  risk?: 'low' | 'moderate' | 'high' | 'extreme'
+}) {
+  return <Link to={destination} className={`uploaded-tile weather-card${risk ? ` risk-${risk}` : ''}`}>
+    <span className="uploaded-tile-heading"><Icon size={17} aria-hidden="true" /><span>{title}</span></span>
+    <strong className="uploaded-tile-value">{value}{unit && <small>{unit}</small>}</strong>
+    <span className="uploaded-tile-detail">{detail}</span>
+  </Link>
+}
+
+function MetricLink({
+  icon: Icon,
+  title,
+  value,
+  detail,
+  destination,
+  risk,
+}: {
+  icon: typeof Thermometer
+  title: string
+  value: string
+  detail: string
+  destination: string
+  risk?: 'low' | 'moderate' | 'high' | 'extreme'
+}) {
+  return <Link to={destination} className={`uploaded-tile uploaded-action-tile${risk ? ` risk-${risk}` : ''}`}>
+    <span className="uploaded-tile-heading"><Icon size={17} aria-hidden="true" /><span>{title}</span></span>
+    <strong className="uploaded-action-value">{value}</strong>
+    <span className="uploaded-tile-detail">{detail}</span>
+  </Link>
 }
