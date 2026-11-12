@@ -1,0 +1,165 @@
+/* Hallmark · shape: app screen · genre: editorial · theme: Formwork (deal 1/3)
+ * nav: edge-aligned masthead, wordmark + city picker + one menu button · signature: the current risk verdict cast as a plate
+ * states: loading, empty, error, full · formwork: cast, restrained orange, square edges, grain at 5%
+ * axes: mid/display-condensed/warm · posture: restrained · contrast: pass · v2.0.0 */
+
+/* HeatShield tokens — Formwork, cast pour.
+ * Every colour and face on the site resolves here. Nothing below this block
+ * may carry a literal colour or a font stack.
+ *
+ * Contrast, measured against the surfaces each value actually sits on:
+ *   ink 8.8:1 on paper, 7.3:1 on the band, 13.1:1 on plate
+ *   ink-2 6.8 / 5.7 / 10.2   muted 6.0 / 5.0 / 9.0
+ *   accent-text 5.4 / 4.5 / 8.1 — body-size links, so the band value is the floor
+ *   accent fills carry plate-ink at 5.5:1
+ *   risk ramp: fill text 4.8-6.9:1, adjacent states dE 10.0-14.4 in OKLab
+ *   accent and the warning state sit 14.2 dE apart, so the product accent is
+ *   never mistaken for a hazard colour.
+ */
+
+:root {
+  color-scheme: light;
+
+  /* Paper: concrete, warm grey, three pours. The band sits one clear step
+   * below the page so a ruled section reads as recessed, not as a tint. */
+  --paper: oklch(76% 0.008 80);
+  --paper-2: oklch(71% 0.009 80);
+  --paper-3: oklch(64% 0.01 80);
+
+  /* Plate: the raised surface a card or a reading sits on. */
+  --plate: oklch(88% 0.006 80);
+  --plate-2: oklch(82% 0.007 80);
+  /* Text that sits on an ink band or a filled risk chip. */
+  --plate-ink: oklch(95% 0.006 80);
+
+  /* Ink. */
+  --ink: oklch(18% 0.005 270);
+  --ink-2: oklch(28% 0.006 80);
+  --muted: oklch(31.5% 0.008 80);
+
+  /* Rules and edges. */
+  --rule: oklch(64% 0.01 80);
+  --rule-2: oklch(56% 0.011 80);
+  --rule-hair: 1px;
+  --rule-bar: 3px;
+
+  /* The one signal colour. */
+  --accent: oklch(66% 0.21 38);
+  --accent-ink: oklch(18% 0.005 270);
+  --accent-deep: oklch(48% 0.17 38);
+  --accent-text: oklch(35.4% 0.104 38);
+  --accent-soft: oklch(90% 0.035 62);
+  --focus: oklch(42% 0.15 38);
+
+  /* Hazard ramp. Four states, each a distinct hue family so no two read alike:
+   * low = green, watch = ochre, warning = orange-brown, severe = crimson. */
+  --risk-low: oklch(47% 0.10 158);
+  --risk-low-soft: oklch(91% 0.038 158);
+  --risk-low-text: oklch(42% 0.095 158);
+
+  --risk-watch: oklch(52% 0.11 86);
+  --risk-watch-soft: oklch(92% 0.05 88);
+  --risk-watch-text: oklch(44% 0.095 84);
+
+  --risk-warning: oklch(53% 0.16 50);
+  --risk-warning-soft: oklch(91% 0.055 52);
+  --risk-warning-text: oklch(45% 0.14 46);
+
+  --risk-severe: oklch(45.5% 0.185 18);
+  --risk-severe-soft: oklch(91% 0.05 20);
+  --risk-severe-text: oklch(44% 0.17 18);
+
+  /* The state rule on the verdict plate; each .risk-* class sets it. */
+  --state-colour: var(--rule-2);
+
+  /* Named states, aliased onto the ramp so a status never invents a colour. */
+  --green: var(--risk-low);
+  --green-soft: var(--risk-low-soft);
+  --green-text: var(--risk-low-text);
+  --amber: var(--risk-watch);
+  --amber-soft: var(--risk-watch-soft);
+  --amber-text: var(--risk-watch-text);
+  --red: var(--risk-severe);
+  --red-soft: var(--risk-severe-soft);
+  --red-text: var(--risk-severe-text);
+
+  /* Informational surface: provenance, explanations, provenance strips.
+   * Deliberately a neutral paper, not a fourth colour. */
+  --info: oklch(46% 0.117 250);
+  --info-strong: oklch(40% 0.11 250);
+  --info-soft: oklch(92% 0.012 250);
+  --info-border: oklch(78% 0.02 250);
+  --info-text: oklch(40% 0.11 250);
+
+  /* Legacy names kept so existing rules keep resolving through the system. */
+  --background: var(--paper);
+  --surface: var(--plate);
+  --surface-subtle: var(--info-soft);
+  --border: var(--rule);
+  --border-strong: var(--rule-2);
+  --shadow: none;
+  --shadow-interactive: none;
+  --radius: 0;
+  --radius-control: 0;
+
+  /* Guidance strip aliases. */
+  --guidance-accent: var(--accent-text);
+  --guidance-soft: var(--accent-soft);
+  --guidance-border: var(--rule-2);
+
+  /* Faces. Display condensed, body, and one outlier for figures. */
+  --font-display: "Oswald", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Archivo", ui-sans-serif, sans-serif;
+  --font-outlier: "Archivo Narrow", ui-sans-serif, system-ui, sans-serif;
+
+  --texture-opacity: 0.05;
+  /* One 64px grain tile, inlined so it costs no request and never parses as a
+   * colour. Fractal noise at low opacity over the concrete. */
+  --grain: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter><rect width="64" height="64" filter="url(%23n)"/></svg>');
+  --tracking-display: -0.005em;
+  --display-weight: 700;
+
+  /* Spacing. One 4px scale; nothing off it. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 28px;
+  --space-8: 32px;
+  --space-9: 40px;
+  --space-10: 48px;
+  --space-11: 64px;
+  --space-12: 96px;
+
+  /* Type scale, app ratio 1.125-1.2. No fluid heads inside the tool. */
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.9375rem;
+  --text-md: 1rem;
+  --text-lg: 1.1875rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.625rem;
+  --text-3xl: 2rem;
+  --text-4xl: 2.5rem;
+
+  /* Motion. Concrete does not move: presses land, nothing is orchestrated. */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-micro: 120ms;
+  --dur-short: 220ms;
+
+  /* Layout. */
+  --container: 1180px;
+  --gutter: 32px;
+  --gap: 24px;
+
+  /* Layers. */
+  --z-base: 1;
+  --z-raised: 10;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-overlay: 400;
+}

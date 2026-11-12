@@ -1,0 +1,17 @@
+[
+  {"slug":"mumbai","name":"Mumbai","state":"Maharashtra","latitude":19.0760,"longitude":72.8777,"elevation_m":14,"is_coastal":true},
+  {"slug":"south-mumbai","name":"South Mumbai","state":"Maharashtra","latitude":18.9220,"longitude":72.8347,"elevation_m":8,"is_coastal":true},
+  {"slug":"thane","name":"Thane","state":"Maharashtra","latitude":19.2183,"longitude":72.9781,"elevation_m":7,"is_coastal":true},
+  {"slug":"navi-mumbai","name":"Navi Mumbai","state":"Maharashtra","latitude":19.0330,"longitude":73.0297,"elevation_m":11,"is_coastal":true},
+  {"slug":"pune","name":"Pune","state":"Maharashtra","latitude":18.5204,"longitude":73.8567,"elevation_m":560,"is_coastal":false},
+  {"slug":"ahmedabad","name":"Ahmedabad","state":"Gujarat","latitude":23.0225,"longitude":72.5714,"elevation_m":53,"is_coastal":false},
+  {"slug":"delhi","name":"Delhi","state":"Delhi","latitude":28.6139,"longitude":77.2090,"elevation_m":216,"is_coastal":false},
+  {"slug":"jaipur","name":"Jaipur","state":"Rajasthan","latitude":26.9124,"longitude":75.7873,"elevation_m":431,"is_coastal":false},
+  {"slug":"lucknow","name":"Lucknow","state":"Uttar Pradesh","latitude":26.8467,"longitude":80.9462,"elevation_m":123,"is_coastal":false},
+  {"slug":"bhopal","name":"Bhopal","state":"Madhya Pradesh","latitude":23.2599,"longitude":77.4126,"elevation_m":527,"is_coastal":false},
+  {"slug":"hyderabad","name":"Hyderabad","state":"Telangana","latitude":17.3850,"longitude":78.4867,"elevation_m":542,"is_coastal":false},
+  {"slug":"bengaluru","name":"Bengaluru","state":"Karnataka","latitude":12.9716,"longitude":77.5946,"elevation_m":920,"is_coastal":false},
+  {"slug":"chennai","name":"Chennai","state":"Tamil Nadu","latitude":13.0827,"longitude":80.2707,"elevation_m":7,"is_coastal":true},
+  {"slug":"kochi","name":"Kochi","state":"Kerala","latitude":9.9312,"longitude":76.2673,"elevation_m":3,"is_coastal":true},
+  {"slug":"kolkata","name":"Kolkata","state":"West Bengal","latitude":22.5726,"longitude":88.3639,"elevation_m":9,"is_coastal":false}
+]

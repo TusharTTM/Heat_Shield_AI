@@ -1,0 +1,18 @@
+{
+  "version": "nws-heat-index-screening-v1",
+  "method": "NOAA/NWS heat-index categories mapped to five underlying platform bands",
+  "reference": "https://www.weather.gov/safety/heat-index",
+  "warning": "Screening guidance only; not an official IMD warning or a medical diagnosis. Local authorities may use different thresholds.",
+  "levels": [
+    {"level":"low","minimum_heat_index_c":null,"maximum_heat_index_c":27,"label":"Low","action":"Maintain normal hydration and sun awareness."},
+    {"level":"moderate","minimum_heat_index_c":27,"maximum_heat_index_c":33,"label":"Moderate","action":"Take breaks and increase hydration during prolonged exposure."},
+    {"level":"high","minimum_heat_index_c":33,"maximum_heat_index_c":40,"label":"High","action":"Limit strenuous outdoor activity and seek shade or cooling."},
+    {"level":"severe","minimum_heat_index_c":40,"maximum_heat_index_c":52,"label":"Severe","action":"Avoid prolonged exposure; check on heat-sensitive people."},
+    {"level":"extreme","minimum_heat_index_c":52,"maximum_heat_index_c":null,"label":"Extreme","action":"Avoid outdoor exposure where possible and follow official emergency guidance."}
+  ],
+  "simplified_interface": {
+    "display_levels": ["Low", "Moderate", "High", "Extreme"],
+    "mapping": {"low":"Low", "moderate":"Moderate", "high":"High", "severe":"High", "extreme":"Extreme"},
+    "map_colours": {"low":"green", "moderate":"orange", "high":"orange", "severe":"orange", "extreme":"red"}
+  }
+}

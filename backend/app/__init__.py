@@ -1,0 +1,1 @@
+"""HeatShield AI FastAPI application."""

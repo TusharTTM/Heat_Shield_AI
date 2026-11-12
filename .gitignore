@@ -1,0 +1,47 @@
+# Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Runtime data / artifacts
+*.db
+*.sqlite3
+backend/logs/*.log
+ml/datasets/*.csv
+ml/datasets/*.json
+ml/saved_models/*.joblib
+!ml/datasets/README.md
+!ml/saved_models/README.md
+
+# Node
+*.tsbuildinfo
+node_modules/
+frontend/dist/
+frontend/coverage/
+.vite/
+
+# Firmware local credentials and build output
+firmware/**/include/config.h
+firmware/**/.pio/
+
+# OS / editors
+.DS_Store
+.vscode/
+.idea/
+
+# Test artifacts
+playwright-report/
+test-results/
+
+# Hallmark design-skill scratch (screenshots, deal salt, lint records)
+.hallmark/

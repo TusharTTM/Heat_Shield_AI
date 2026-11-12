@@ -1,0 +1,46 @@
+{
+  "name": "heatshield-ai-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:live-api": "LIVE_OPEN_METEO=true vitest run src/test/live.openMeteo.test.ts",
+    "test:live-ui": "playwright test",
+    "test:official-ui": "playwright test --config playwright.official.config.ts"
+  },
+  "dependencies": {
+    "@fontsource-variable/inter": "^5.2.5",
+    "@fontsource/archivo": "^5.3.0",
+    "@fontsource/archivo-narrow": "^5.3.0",
+    "@fontsource/ibm-plex-mono": "^5.2.5",
+    "@fontsource/oswald": "^5.3.0",
+    "chart.js": "^4.4.9",
+    "leaflet": "^1.9.4",
+    "lucide-react": "^0.468.0",
+    "react": "^19.0.0",
+    "react-chartjs-2": "^5.3.0",
+    "react-dom": "^19.0.0",
+    "react-leaflet": "^5.0.0",
+    "react-router-dom": "^7.5.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.1",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/leaflet": "^1.9.16",
+    "@types/node": "^22.14.1",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.4.0",
+    "jsdom": "^26.1.0",
+    "typescript": "~5.7.2",
+    "vite": "^6.4.5",
+    "vitest": "^5.1.0"
+  }
+}

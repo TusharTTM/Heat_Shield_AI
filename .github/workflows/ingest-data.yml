@@ -1,0 +1,144 @@
+name: Ingest source-backed climate data
+
+on:
+  workflow_dispatch:
+    inputs:
+      start:
+        description: Archive start date
+        default: "2016-01-01"
+      end:
+        description: Archive end date available in the archive
+        default: "2025-12-31"
+      train:
+        description: Train and evaluate all three models after complete ingestion
+        type: boolean
+        default: false
+  schedule:
+    - cron: "17 2 1 1 *"
+
+permissions:
+  contents: read
+
+jobs:
+  retrieve:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Retrieve and validate Open-Meteo observations
+        run: python ml/ingest_open_meteo.py --start "${{ inputs.start || '2016-01-01' }}" --end "${{ inputs.end || '2025-12-31' }}" --current-snapshots
+      - name: Live-test the backend Open-Meteo client
+        if: always()
+        run: |
+          python -m pip install httpx==0.28.1
+          python - <<'PY'
+          import json
+          from backend.app.regions import list_regions
+          from backend.app.weather import WeatherClient
+          region = list_regions()[0]
+          client = WeatherClient("https://api.open-meteo.com/v1/forecast", timeout_seconds=30)
+          try:
+              current = client.current(region)
+              retrieved_at, forecast = client.forecast(region)
+              assert current["temperature_c"] is not None and current["humidity_pct"] is not None
+              assert len(forecast) == 5
+          except Exception as exc:
+              cause = f"; cause={type(exc.__cause__).__name__}" if exc.__cause__ else ""
+              print(f"::error::Live provider smoke failed: {type(exc).__name__}{cause}")
+              raise
+          evidence = {
+              "live_provider_verified": True, "region": region["slug"],
+              "observed_at": current["observed_at"].isoformat(), "retrieved_at": retrieved_at.isoformat(),
+              "temperature_c": current["temperature_c"], "humidity_pct": current["humidity_pct"],
+              "forecast_days": len(forecast), "forecast_dates": [str(row["forecast_for"]) for row in forecast],
+          }
+          print(json.dumps(evidence))
+          print("::notice::" + json.dumps(evidence).replace("%", "%25"))
+          PY
+      - name: Train and evaluate on retrieved archive
+        if: inputs.train
+        run: |
+          python -m pip install -r ml/requirements.txt
+          python ml/training/train.py --dataset ml/datasets/open_meteo_daily.csv --metadata ml/datasets/ingestion_metadata.json --output ml/saved_models
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          metadata = json.loads(Path("ml/saved_models/temperature_model.metadata.json").read_text())
+          evidence = {
+              "real_data_training_completed": True, "model_version": metadata["model_version"],
+              "raw_rows": metadata["raw_rows"], "usable_feature_rows": metadata["usable_feature_rows"],
+              "train_rows": metadata["train_rows"], "evaluation_rows": metadata["evaluation_rows"],
+              "train_end": metadata["train_end"], "evaluation_start": metadata["evaluation_start"],
+              "models": metadata["models"], "selected_model": metadata["selected_model"],
+              "dataset_type": metadata["dataset_type"], "promotion_eligible": metadata["promotion_eligible"],
+          }
+          print("::notice::" + json.dumps(evidence).replace("%", "%25"))
+          PY
+      - name: Verify real candidate through FastAPI inference
+        if: inputs.train
+        run: |
+          python -m pip install -r backend/requirements.txt
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import pandas as pd
+          from fastapi.testclient import TestClient
+          from backend.app.config import Settings
+          from backend.app.main import create_app
+          from ml.training.features import make_features
+          features = make_features(pd.read_csv("ml/datasets/open_meteo_daily.csv"))
+          settings = Settings(
+              app_env="verification", database_url="sqlite:////tmp/heatshield-real-candidate.db",
+              ml_model_path=Path("ml/saved_models/temperature_model.joblib").resolve(),
+              ml_metadata_path=Path("ml/saved_models/temperature_model.metadata.json").resolve(),
+          )
+          requests = []
+          for region in sorted(features["region"].unique()):
+              row = features[features["region"] == region].iloc[-1]
+              requests.append({
+                  "region": region, "target_date": row["date"].date().isoformat(),
+                  "recent_max_temperatures": [float(row["lag_3"]), float(row["lag_2"]), float(row["lag_1"])],
+              })
+          with TestClient(create_app(settings)) as client:
+              assert client.get("/api/v1/ml/status").json()["status"] == "loaded"
+              responses = [client.post("/api/v1/ml/predict", json=request) for request in requests]
+              assert all(response.status_code == 200 for response in responses)
+              hotspot_response = client.post("/api/v1/ml/hotspots", json=requests)
+              assert hotspot_response.status_code == 200
+              assert len(hotspot_response.json()) == 5
+              assert all(item["evidence_type"] == "model_inferred" for item in hotspot_response.json())
+              sample = responses[0].json()
+              evidence = {
+                  "real_candidate_fastapi_verified": True, "prediction_regions": len(responses),
+                  "hotspot_count": len(hotspot_response.json()), "model_version": sample["model_version"],
+                  "sample": {"region": sample["region"], "target_date": sample["target_date"],
+                             "predicted_temperature_c": sample["predicted_temperature_c"]},
+                  "official_forecast": sample["official_forecast"],
+              }
+              print("::notice::" + json.dumps(evidence).replace("%", "%25"))
+          PY
+      - name: Preserve source metadata and observations
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: heatshield-open-meteo-${{ github.run_id }}
+          path: |
+            ml/datasets/open_meteo_daily.csv
+            ml/datasets/ingestion_metadata.json
+            ml/datasets/current_snapshots.json
+          retention-days: 30
+          if-no-files-found: warn
+      - name: Preserve evaluated candidate model and metadata
+        if: inputs.train
+        uses: actions/upload-artifact@v4
+        with:
+          name: heatshield-candidate-model-${{ github.run_id }}
+          path: |
+            ml/saved_models/temperature_model.joblib
+            ml/saved_models/temperature_model.metadata.json
+          retention-days: 30
+          if-no-files-found: error
+
+# Artifact promotion is intentionally separate and requires chronological metric review.

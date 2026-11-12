@@ -1,0 +1,291 @@
+name: Verify full-stack integrations
+
+on:
+  push:
+    paths:
+      - "backend/**"
+      - "ml/**"
+      - "firmware/**"
+      - "shared/**"
+      - "frontend/**"
+      - "compose.yaml"
+      - ".dockerignore"
+      - ".github/workflows/verify-integrations.yml"
+  pull_request:
+    paths:
+      - "backend/**"
+      - "ml/**"
+      - "firmware/**"
+      - "shared/**"
+      - "frontend/**"
+      - "compose.yaml"
+      - ".github/workflows/verify-integrations.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  python-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            backend/requirements-dev.txt
+            ml/requirements-dev.txt
+      - run: pip install -r backend/requirements-dev.txt -r ml/requirements-dev.txt
+      - run: python -m pip check
+      - run: ruff check backend ml firmware
+      - run: python -m pytest backend/tests ml/tests firmware/tests -q
+
+  frontend-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npx tsc -b
+      - run: npm test
+      - run: npm run build
+      - run: npm audit --audit-level=low
+
+  official-sources-browser:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - name: Install Chromium for mocked official-source desktop/mobile browser tests
+        run: npx playwright install --with-deps chromium
+      - name: Execute desktop, 390px mobile, and 503 failure official-source specs
+        run: |
+          set -o pipefail
+          npm run test:official-ui 2>&1 | tee "$RUNNER_TEMP/official-ui.txt"
+          echo '::notice title=Official-source Chromium verification::{"officialSourcesBrowserVerified":true,"specsPassed":3,"viewports":["1440x1000","390x844"]}'
+      - name: Expose official-source browser failure tail
+        if: failure()
+        run: |
+          python3 - "$RUNNER_TEMP/official-ui.txt" <<'PY'
+          from pathlib import Path
+          import base64
+          import sys
+          path = Path(sys.argv[1])
+          if path.exists():
+              output = path.read_text(errors="replace")[-2400:]
+              encoded = base64.b64encode(output.encode()).decode()
+              print(f"::notice title=Official browser failure base64::{encoded}")
+          PY
+      - name: Publish official-source browser summary
+        if: always()
+        run: |
+          if [ -f "$RUNNER_TEMP/official-ui.txt" ]; then
+            {
+              echo "## Official-source Playwright Chromium output (mocked HTTP)"
+              echo '```text'
+              cat "$RUNNER_TEMP/official-ui.txt"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  firmware-compile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: .github/workflows/verify-integrations.yml
+      - run: pip install platformio==6.1.18
+      - run: cp firmware/esp32_dht22/include/config.h.example firmware/esp32_dht22/include/config.h
+      - run: cd firmware/esp32_dht22 && pio run
+
+  backend-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -f backend/Dockerfile -t heatshield-api:verification .
+
+  postgres-migrations-and-compose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare isolated verification environment and validate Compose config
+        run: |
+          cat > .env <<'EOF'
+          POSTGRES_PASSWORD=ci_verification_password_not_for_production_987654
+          SENSOR_API_KEY=ci_verification_sensor_key_not_for_production_9876543210
+          CORS_ORIGINS=https://tusharttm.github.io
+          SACHET_ENABLED=false
+          DATA_GOV_IN_API_KEY=
+          EOF
+          docker compose config -q
+      - name: Start PostGIS 16 and apply migrations 001 through 005 twice
+        run: |
+          set -o pipefail
+          {
+            docker compose up -d --wait db
+            for attempt in $(seq 1 30); do
+              if docker compose exec -T db psql -U heatshield -d heatshield -v ON_ERROR_STOP=1 -c "SELECT 1;" >/dev/null 2>&1; then
+                sleep 3
+                if docker compose exec -T db psql -U heatshield -d heatshield -v ON_ERROR_STOP=1 -c "SELECT 1;" >/dev/null 2>&1; then
+                  break
+                fi
+              fi
+              sleep 2
+            done
+            docker compose exec -T db psql -U heatshield -d heatshield -v ON_ERROR_STOP=1 \
+              -c "CREATE EXTENSION IF NOT EXISTS postgis; SELECT PostGIS_Version();"
+            for pass in 1 2; do
+              for migration in \
+                backend/migrations/001_initial.sql \
+                backend/migrations/002_air_quality.sql \
+                backend/migrations/003_air_quality_european_forecast.sql \
+                backend/migrations/004_cpcb_station_observations.sql \
+                backend/migrations/005_sachet_cap_alerts.sql; do
+                echo "Pass $pass: applying $migration"
+                docker compose exec -T db psql -U heatshield -d heatshield -v ON_ERROR_STOP=1 < "$migration"
+              done
+            done
+          } 2>&1 | tee "$RUNNER_TEMP/postgres-step.txt"
+      - name: Start FastAPI container and verify PostgreSQL ORM + HTTP contracts
+        run: |
+          docker compose up --build -d api
+          for attempt in $(seq 1 30); do
+            if curl --silent --fail http://127.0.0.1:8000/api/v1/health >/dev/null; then
+              break
+            fi
+            sleep 2
+          done
+          docker compose exec -T api python - <<'PY' | tee "$RUNNER_TEMP/postgres-evidence.json"
+          import json
+          from datetime import date, datetime, timedelta, timezone
+          import httpx
+          from sqlalchemy import create_engine, text
+          from sqlalchemy.orm import Session
+          import os
+          from backend.app.models import (
+              AirQualityForecastHour, AirQualityObservation, ExternalDocumentCache,
+              ForecastRecord, OfficialAirQualityFetch, OfficialAirQualityObservation,
+              OfficialAlert, OfficialAlertFetch, SensorReading, WeatherObservation,
+          )
+
+          db_url = os.environ["DATABASE_URL"]
+          sensor_key = os.environ["SENSOR_API_KEY"]
+          engine = create_engine(db_url)
+          expected_tables = {
+              "weather_observations", "forecast_records", "sensor_readings",
+              "air_quality_observations", "air_quality_forecast_hours",
+              "official_air_quality_fetches", "official_air_quality_observations",
+              "external_document_cache", "official_alert_fetches", "official_alerts",
+          }
+          now = datetime.now(timezone.utc).replace(microsecond=0)
+          with Session(engine) as session:
+              postgis_version = session.execute(text("SELECT PostGIS_Version()")).scalar_one()
+              tables = set(session.execute(text(
+                  "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'"
+              )).scalars().all())
+              assert expected_tables.issubset(tables), f"Missing tables: {expected_tables - tables}"
+
+              # Round-trip every migrated table including quoted "references" and JSONB columns.
+              w = WeatherObservation(region_slug="mumbai", observed_at=now, retrieved_at=now, temperature_c=31.2, humidity_pct=68.0, source="ci-pg-check", provider_payload={"ok": True})
+              f = ForecastRecord(region_slug="mumbai", forecast_for=date(2026, 11, 8), retrieved_at=now, temperature_max_c=34.0, temperature_min_c=26.0, source="ci-pg-check")
+              aq = AirQualityObservation(region_slug="mumbai", model_time=now, retrieved_at=now, us_aqi=92.0, european_aqi=44.0, pm2_5=31.5, source="ci-pg-check", provider_payload={"cams": True})
+              aqh = AirQualityForecastHour(region_slug="mumbai", model_time=now, retrieved_at=now, us_aqi=95.0, european_aqi=46.0, pm2_5=33.0, source="ci-pg-check")
+              cpcb_f = OfficialAirQualityFetch(region_slug="mumbai", retrieved_at=now, records_read=2, invalid_records=0, observation_count=1)
+              cpcb_o = OfficialAirQualityObservation(region_slug="mumbai", country="India", state="Maharashtra", city="Mumbai", station="CI PG Test Station", observed_at=now, retrieved_at=now, aqi=142.0, pollutants={"PM2.5": {"pollutant_id": "PM2.5", "average": 45.0, "unit": "µg/m³"}}, source="ci-pg-check")
+              doc = ExternalDocumentCache(url="https://sachet.test/rss.xml", source="sachet-rss", etag='"v1"', body="<rss/>", retrieved_at=now, checked_at=now)
+              af = OfficialAlertFetch(feed_url="https://sachet.test/rss.xml", retrieved_at=now, checked_at=now, current_identifiers=["cap-pg-1"], retrieval_complete=True, stale_cache_used=False)
+              al = OfficialAlert(identifier="cap-pg-1", sender="IMD-Test", sent=now, status="Actual", msg_type="Update", scope="Public", references="IMD-Test,cap-pg-0,2026-11-08T00:00:00+00:00", event="Heat Wave", severity="Severe", expires=now + timedelta(hours=2), areas=["Mumbai"], polygons=[[[19.0, 72.8], [19.2, 72.8], [19.1, 73.0]]], info_payload={"infos": []}, source_url="https://sachet.test/cap.xml", retrieved_at=now, last_seen_in_feed_at=now)
+              session.add_all([w, f, aq, aqh, cpcb_f, cpcb_o, doc, af, al])
+              session.commit()
+              stored_alert = session.query(OfficialAlert).filter_by(identifier="cap-pg-1").one()
+              assert stored_alert.references.startswith("IMD-Test,cap-pg-0")
+              for row in [al, af, doc, cpcb_o, cpcb_f, aqh, aq, f, w]:
+                  session.delete(row)
+              session.commit()
+
+          with httpx.Client(base_url="http://127.0.0.1:8000", timeout=10) as client:
+              health = client.get("/api/v1/health")
+              assert health.status_code == 200 and health.json()["database"] == "ok"
+              assert client.get("/openapi.json").status_code == 200
+              regions = client.get("/api/v1/regions")
+              assert regions.status_code == 200 and len(regions.json()) == 15
+              assert client.get("/api/v1/safety/extreme").status_code == 200
+              cpcb = client.get("/api/v1/official/air-quality/current/mumbai")
+              assert cpcb.status_code == 503 and cpcb.json()["code"] == "CPCB_NOT_CONFIGURED"
+              cpcb_hist = client.get("/api/v1/official/air-quality/history/mumbai")
+              assert cpcb_hist.status_code == 200 and cpcb_hist.json()["status"] == "empty"
+              sachet = client.get("/api/v1/official/alerts/mumbai")
+              assert sachet.status_code == 503 and sachet.json()["code"] == "SACHET_NOT_CONFIGURED"
+              unauth = client.post("/api/v1/sensors/readings", json={"device_id": "ci-pg", "observed_at": now.isoformat(), "temperature_c": 34.5, "humidity_pct": 55.0, "source": "simulated"})
+              assert unauth.status_code == 401
+              ingest = client.post(
+                  "/api/v1/sensors/readings",
+                  headers={"X-Sensor-Key": sensor_key},
+                  json={"device_id": "ci-pg", "observed_at": now.isoformat(), "temperature_c": 34.5, "humidity_pct": 55.0, "source": "simulated", "note": "CI PostgreSQL simulated verification"},
+              )
+              assert ingest.status_code == 201 and ingest.json()["created"] is True
+              dup = client.post(
+                  "/api/v1/sensors/readings",
+                  headers={"X-Sensor-Key": sensor_key},
+                  json={"device_id": "ci-pg", "observed_at": now.isoformat(), "temperature_c": 34.5, "humidity_pct": 55.0, "source": "simulated", "note": "CI PostgreSQL simulated verification"},
+              )
+              assert dup.status_code == 201 and dup.json()["created"] is False
+              status = client.get("/api/v1/sensors/ci-pg/status", headers={"X-Sensor-Key": sensor_key})
+              assert status.status_code == 200 and status.json()["state"] == "online" and status.json()["is_simulated"] is True
+
+          print(json.dumps({
+              "postgresComposeVerified": True,
+              "postgisVersion": postgis_version,
+              "migrationsAppliedTwice": ["001", "002", "003", "004", "005"],
+              "tablesVerified": sorted(expected_tables),
+              "regionsCount": 15,
+              "simulatedSensorPersisted": True,
+          }))
+          PY
+          echo "::notice title=PostgreSQL/PostGIS Compose verification::$(cat "$RUNNER_TEMP/postgres-evidence.json")"
+          {
+            echo "## PostgreSQL 16 / PostGIS 3.4 & Docker Compose verification"
+            echo '```json'
+            cat "$RUNNER_TEMP/postgres-evidence.json"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Collect Compose logs on failure
+        if: failure()
+        run: |
+          docker compose logs > "$RUNNER_TEMP/compose-logs.txt" 2>&1 || true
+          python3 - "$RUNNER_TEMP/postgres-step.txt" "$RUNNER_TEMP/compose-logs.txt" <<'PY'
+          from pathlib import Path
+          import base64
+          import sys
+          chunks = []
+          for arg in sys.argv[1:]:
+              p = Path(arg)
+              if p.exists():
+                  chunks.append(p.read_text(errors="replace")[-1200:])
+          if chunks:
+              encoded = base64.b64encode("\n---\n".join(chunks)[-2400:].encode()).decode()
+              print(f"::notice title=Postgres/Compose failure base64::{encoded}")
+          PY
+      - name: Tear down Compose stack
+        if: always()
+        run: docker compose down -v

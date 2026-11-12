@@ -1,0 +1,17 @@
+#pragma once
+
+// Copy this file to config.h and replace every value locally. config.h is git-ignored.
+constexpr char WIFI_SSID[] = "replace-with-wifi-ssid";
+constexpr char WIFI_PASSWORD[] = "replace-with-wifi-password";
+constexpr char API_URL[] = "https://api.example.com/api/v1/sensors/readings";
+constexpr char SENSOR_API_KEY[] = "replace-with-a-long-random-server-issued-key";
+constexpr char DEVICE_ID[] = "esp32-location-001";
+constexpr int DHT_PIN = 4;
+constexpr unsigned long READ_INTERVAL_MS = 300000;
+
+// Use the PEM root CA for the deployed API's certificate chain. Never use setInsecure().
+constexpr char ROOT_CA_CERT[] = R"PEM(
+-----BEGIN CERTIFICATE-----
+Replace this block with the deployed API root CA certificate.
+-----END CERTIFICATE-----
+)PEM";

@@ -1,0 +1,17 @@
+.git
+.github
+.env
+.env.*
+!.env.example
+frontend
+docs
+firmware
+ml/datasets
+ml/tests
+ml/training
+ml/prediction
+**/__pycache__
+**/.pytest_cache
+**/*.db
+**/*.sqlite3
+**/*.joblib

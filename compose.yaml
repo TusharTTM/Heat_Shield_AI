@@ -1,0 +1,50 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_DB: heatshield
+      POSTGRES_USER: heatshield
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U heatshield -d heatshield"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      APP_ENV: production
+      DATABASE_URL: postgresql+psycopg://heatshield:${POSTGRES_PASSWORD}@db:5432/heatshield
+      SENSOR_API_KEY: ${SENSOR_API_KEY:?Set SENSOR_API_KEY in .env}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
+      WEATHER_CACHE_SECONDS: ${WEATHER_CACHE_SECONDS:-600}
+      AIR_QUALITY_BASE_URL: ${AIR_QUALITY_BASE_URL:-https://air-quality-api.open-meteo.com/v1/air-quality}
+      AIR_QUALITY_TIMEOUT_SECONDS: ${AIR_QUALITY_TIMEOUT_SECONDS:-10}
+      DATA_GOV_IN_API_KEY: ${DATA_GOV_IN_API_KEY:-}
+      CPCB_BASE_URL: ${CPCB_BASE_URL:-https://api.data.gov.in/resource/3b01bcb8-0b14-4abf-b6f2-c1bfd384ba69}
+      CPCB_TIMEOUT_SECONDS: ${CPCB_TIMEOUT_SECONDS:-10}
+      CPCB_CACHE_SECONDS: ${CPCB_CACHE_SECONDS:-3600}
+      SACHET_ENABLED: ${SACHET_ENABLED:-true}
+      SACHET_FEED_URL: ${SACHET_FEED_URL:-https://sachet.ndma.gov.in/cap_public_website/rss/rss_india.xml}
+      SACHET_TIMEOUT_SECONDS: ${SACHET_TIMEOUT_SECONDS:-12}
+      SACHET_CACHE_SECONDS: ${SACHET_CACHE_SECONDS:-300}
+      SACHET_MAX_CAP_DOCUMENTS: ${SACHET_MAX_CAP_DOCUMENTS:-50}
+      ML_MODEL_PATH: /app/ml/saved_models/temperature_model.joblib
+      ML_METADATA_PATH: /app/ml/saved_models/temperature_model.metadata.json
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./ml/saved_models:/app/ml/saved_models:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
