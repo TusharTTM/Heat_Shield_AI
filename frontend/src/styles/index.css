@@ -2239,6 +2239,9 @@ td {
 .dashboard-refresh:hover { background: var(--paper-2); }
 .dashboard-refresh:disabled { cursor: wait; opacity: .65; }
 .dashboard-stale-note { padding: var(--space-3) var(--space-4); border-left: 3px solid var(--risk-watch); background: var(--paper-2); color: var(--ink-2); font-size: var(--text-sm); }
+.dashboard-error-note { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2) var(--space-4); border-left-color: var(--risk-severe); }
+.dashboard-error-note p { max-width: none; }
+.dashboard-try-again { padding: var(--space-1) var(--space-3); border: 1px solid var(--rule-2); border-radius: 999px; background: transparent; color: var(--ink); cursor: pointer; }
 
 .uploaded-alert {
   --alert-state: var(--rule-2);
@@ -2290,7 +2293,7 @@ td {
 }
 .uploaded-tile:hover { background: var(--plate-2); translate: 0 -2px; }
 .uploaded-tile:focus-visible { outline-color: var(--focus); }
-.uploaded-tile-heading { display: inline-flex; align-items: center; gap: var(--space-2); color: #3f3f3f; font-size: var(--text-sm); font-weight: 600; }
+.uploaded-tile-heading { display: inline-flex; align-items: center; gap: var(--space-2); color: #3f3f3f; font-family: var(--font-body); font-size: var(--text-sm); font-weight: 600; letter-spacing: 0; line-height: 1.25; text-transform: none; }
 .uploaded-tile-value { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--space-2); color: var(--ink); font-family: var(--font-outlier); font-size: var(--text-3xl); font-weight: 500; line-height: 1; font-variant-numeric: tabular-nums; }
 .uploaded-tile-value small { color: #555; font-family: var(--font-body); font-size: var(--text-xs); font-weight: 500; }
 .uploaded-tile-detail { color: var(--muted); font-size: var(--text-xs); line-height: 1.4; }
@@ -2314,7 +2317,9 @@ td {
 .uploaded-checkmark { display: grid; flex: 0 0 22px; width: 22px; height: 22px; place-items: center; border: 1px solid #777; border-radius: 50%; color: transparent; }
 .uploaded-suggestion-list input:checked + .uploaded-checkmark { border-color: #191919; background: #191919; color: #fff; }
 .uploaded-suggestion-list input:focus-visible + .uploaded-checkmark { outline: 2px solid #111; outline-offset: 2px; }
+.uploaded-suggestion-copy { display: flex; flex-direction: column; gap: var(--space-1); }
 .uploaded-suggestion-title { color: #191919; font-size: var(--text-sm); font-weight: 600; line-height: 1.45; }
+.uploaded-suggestion-copy small { color: #656565; font-size: var(--text-xs); }
 .uploaded-suggestion-list li.completed .uploaded-suggestion-title { color: #666; text-decoration: line-through; }
 .uploaded-suggestion-list details { margin: var(--space-2) 0 0 34px; color: #555; font-size: var(--text-xs); }
 .uploaded-suggestion-list summary { cursor: pointer; }

@@ -151,18 +151,18 @@ describe('5 · the Forecast announces the peak once', () => {
 })
 
 describe('6 · loading never looks like a result', () => {
-  it('shows a checklist placeholder instead of unassessed tasks while data loads', async () => {
+  it('shows blank reading cards and unassessed suggestions while data loads', async () => {
     let resolveWeather!: (value: Awaited<ReturnType<typeof weatherResult>>) => void
     weatherMock.mockReturnValueOnce(new Promise((resolve) => { resolveWeather = resolve }))
     renderApp('/')
-    // The placeholder is present and the task list is not.
-    expect(document.querySelector('.action-checklist-loading')).not.toBeNull()
-    expect(document.querySelector('.action-task-list')).toBeNull()
-    expect(document.querySelector('.action-checklist-loading')).toHaveTextContent(/Working out today’s actions for Mumbai/i)
+    expect(screen.getByRole('status')).toHaveTextContent(/Loading weather for Mumbai/i)
+    expect(document.querySelectorAll('.key-readings-grid .weather-card')).toHaveLength(5)
+    expect(Array.from(document.querySelectorAll('.key-readings-grid .weather-card')).every((card) => card.textContent?.includes('—'))).toBe(true)
+    const tasks = screen.getByRole('list', { name: /Suggested preparedness tasks for Mumbai/i })
+    expect(within(tasks).getAllByText('Unassessed')).toHaveLength(3)
     resolveWeather(weatherResult())
     await screen.findByRole('heading', { name: 'Temperature' })
-    expect(document.querySelector('.action-checklist-loading')).toBeNull()
-    expect(document.querySelector('.action-task-list')).not.toBeNull()
+    expect(within(screen.getByRole('list', { name: /Suggested preparedness tasks for Mumbai/i })).queryByText('Unassessed')).not.toBeInTheDocument()
   })
 
   it('does not open a second live region beside the weather announcement', async () => {
@@ -170,7 +170,7 @@ describe('6 · loading never looks like a result', () => {
     renderApp('/')
     const statuses = screen.getAllByRole('status')
     expect(statuses).toHaveLength(1)
-    expect(document.querySelector('.action-checklist-loading')).not.toHaveAttribute('role')
+    expect(statuses[0]).toHaveTextContent(/Loading weather for Mumbai/i)
   })
 
   it('says it is awaiting readings in the map inspector rather than reporting none', () => {

@@ -151,44 +151,30 @@ describe('Keyboard access for the new disclosures', () => {
   })
 })
 
-describe('Dashboard action-first ordering and trimmed 3D controls', () => {
-  it('places suggested actions before the 3D stage in the DOM so mobile reading order matches', async () => {
+describe('Uploaded dashboard layout and details', () => {
+  it('shows the eight uploaded dashboard tiles before the supporting detail drawer', async () => {
     renderRoute('/')
     await screen.findByRole('heading', { name: 'Temperature' })
 
-    const grid = document.querySelector('.dashboard-workspace-grid')!
-    const order = Array.from(grid.children).map((child) => child.className)
-    expect(order[0]).toContain('dashboard-action-column')
-    expect(order[1]).toContain('risk-scene-card')
-
-    // Progress card stays visible (not collapsed) and its badge rules remain available.
-    const progress = document.querySelector('.preparedness-progress-card')!
-    expect(progress).toBeTruthy()
-    const rules = progress.querySelector('.progress-rules') as HTMLDetailsElement
-    expect(rules.open).toBe(false)
-    expect(rules.textContent).toMatch(/Complete 1 suggested precaution today/i)
+    const grid = document.querySelector('.key-readings-grid')!
+    expect(grid.querySelectorAll('.weather-card')).toHaveLength(5)
+    expect(within(grid as HTMLElement).getByRole('heading', { name: 'Heat risk' })).toBeInTheDocument()
+    expect(within(grid as HTMLElement).getByRole('heading', { name: 'Reports' })).toBeInTheDocument()
+    expect(within(grid as HTMLElement).getByRole('heading', { name: 'Safety guide' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Safety suggestions' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Heat mission progress' })).toBeInTheDocument()
+    expect(document.querySelector('details.secondary-details-drawer')).not.toHaveAttribute('open')
   })
 
-  it('keeps only essential camera controls on the toolbar, with rotate/tilt in a labelled menu', async () => {
+  it('keeps the five measured readings separate from the three navigation tiles', async () => {
     renderRoute('/')
     await screen.findByRole('heading', { name: 'Temperature' })
-
-    const toolbar = screen.getByRole('toolbar', { name: /3D risk view camera and display controls/i })
-    // jsdom has no Canvas 2D, so the automatic 2D fallback renders and camera controls are
-    // correctly withheld there. The fallback still offers refresh + text city access.
-    expect(within(toolbar).getByRole('button', { name: /Refresh/i })).toBeInTheDocument()
-    expect(within(toolbar).queryByRole('button', { name: 'Zoom 3D view in' })).not.toBeInTheDocument()
-    expect(screen.getByRole('region', { name: /2D stylized India heat-risk fallback view/i })).toBeInTheDocument()
-  })
-
-  it('does not repeat the dashboard key readings inside the stage inspector', async () => {
-    renderRoute('/')
-    await screen.findByRole('heading', { name: 'Temperature' })
-    const inspector = screen.getByLabelText(/Selected 3D location readings for Mumbai/)
-    // One deciding value only; temperature/humidity/feels-like live in the key-reading cards.
-    expect(inspector.querySelectorAll('.risk-scene-inspector-metric strong')).toHaveLength(1)
-    expect(within(inspector).queryByText('Humidity')).not.toBeInTheDocument()
-    expect(document.querySelectorAll('.key-readings-grid .weather-card')).toHaveLength(5)
+    const grid = document.querySelector('.key-readings-grid')!
+    expect(grid.querySelectorAll('.weather-card')).toHaveLength(5)
+    expect(grid.querySelectorAll('.uploaded-action-tile')).toHaveLength(3)
+    expect(within(grid as HTMLElement).getByRole('heading', { name: 'Temperature' })).toBeInTheDocument()
+    expect(within(grid as HTMLElement).getByRole('heading', { name: 'Heat index' })).toBeInTheDocument()
+    expect(within(grid as HTMLElement).getByRole('heading', { name: 'Air quality' })).toBeInTheDocument()
   })
 
   it('puts per-task explanations on demand without losing them', async () => {

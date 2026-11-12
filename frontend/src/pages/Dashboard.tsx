@@ -96,11 +96,13 @@ export default function Dashboard() {
     setCompletionStore((previous) => ({ ...previous, [storageScope]: [] }))
   }, [setCompletionStore, storageScope])
 
-  const modelStatus = status === 'loading' || airStatus === 'loading'
-    ? 'Loading current readings'
-    : status === 'error' && airStatus === 'error'
-      ? 'Models unavailable'
-      : 'Weather + air models'
+  const modelStatus = freshness === 'stale' || airFreshness === 'stale'
+    ? 'Stale cached data'
+    : status === 'loading' || airStatus === 'loading'
+      ? `Loading weather for ${selected.name}`
+      : status === 'error' && airStatus === 'error'
+        ? 'Models unavailable'
+        : 'Weather + air models'
 
   return (
     <div className="uploaded-dashboard">
@@ -112,9 +114,11 @@ export default function Dashboard() {
           <span>City selection</span>
         </div>
         <CityPicker />
-        <StatusBadge status={freshness === 'stale' || airFreshness === 'stale' ? 'stale' : status === 'ready' || airStatus === 'ready' ? 'weather-model' : status === 'loading' || airStatus === 'loading' ? 'loading' : 'unavailable'}>
-          {modelStatus}
-        </StatusBadge>
+        <span role="status" aria-live="polite">
+          <StatusBadge status={freshness === 'stale' || airFreshness === 'stale' ? 'stale' : status === 'ready' || airStatus === 'ready' ? 'weather-model' : status === 'loading' || airStatus === 'loading' ? 'loading' : 'unavailable'}>
+            {modelStatus}
+          </StatusBadge>
+        </span>
         <button
           type="button"
           className="dashboard-refresh"
@@ -129,13 +133,15 @@ export default function Dashboard() {
 
       {(warning || airWarning) && (
         <p className="dashboard-stale-note" role="status">
-          {warning ?? airWarning} Showing the most recently available model readings.
+          {warning ?? airWarning} Showing cached weather and air-quality readings.
         </p>
       )}
-      {(error || airError) && !weather && !airQuality && (
-        <p className="dashboard-stale-note" role="status">
-          {error ?? airError} Readings will appear here when the model feed is available.
-        </p>
+      {((error && !weather) || (airError && !airQuality)) && (
+        <div className="dashboard-stale-note dashboard-error-note" role="alert">
+          <p><strong>{error && !weather ? `Weather unavailable for ${selected.name}` : `Air quality unavailable for ${selected.name}`}</strong></p>
+          <p>{error && !weather ? error : airError}</p>
+          <button type="button" className="dashboard-try-again" onClick={refresh}>Try again</button>
+        </div>
       )}
 
       <section
@@ -211,11 +217,14 @@ export default function Dashboard() {
                   <label>
                     <input type="checkbox" checked={completed} onChange={() => toggleTask(task.id)} />
                     <span className="uploaded-checkmark" aria-hidden="true"><Check size={14} /></span>
-                    <span className="uploaded-suggestion-title">{task.title}</span>
+                    <span className="uploaded-suggestion-copy">
+                      <span className="uploaded-suggestion-title">{task.title}</span>
+                      <small>{task.level ? `${task.level[0].toUpperCase()}${task.level.slice(1)} screening` : 'Unassessed'}</small>
+                    </span>
                   </label>
-                  <details>
+                  <details className="action-task-more">
                     <summary>Why this helps</summary>
-                    <p>{task.detail}</p>
+                    <p className="action-task-detail">{task.detail}</p>
                   </details>
                 </li>
               })}
@@ -299,7 +308,7 @@ function MetricCard({
   risk?: 'low' | 'moderate' | 'high' | 'extreme'
 }) {
   return <Link to={destination} className={`uploaded-tile weather-card${risk ? ` risk-${risk}` : ''}`}>
-    <span className="uploaded-tile-heading"><Icon size={17} aria-hidden="true" /><span>{title}</span></span>
+    <h3 className="uploaded-tile-heading"><Icon size={17} aria-hidden="true" /><span>{title}</span></h3>
     <strong className="uploaded-tile-value">{value}{unit && <small>{unit}</small>}</strong>
     <span className="uploaded-tile-detail">{detail}</span>
   </Link>
@@ -321,7 +330,7 @@ function MetricLink({
   risk?: 'low' | 'moderate' | 'high' | 'extreme'
 }) {
   return <Link to={destination} className={`uploaded-tile uploaded-action-tile${risk ? ` risk-${risk}` : ''}`}>
-    <span className="uploaded-tile-heading"><Icon size={17} aria-hidden="true" /><span>{title}</span></span>
+    <h3 className="uploaded-tile-heading"><Icon size={17} aria-hidden="true" /><span>{title}</span></h3>
     <strong className="uploaded-action-value">{value}</strong>
     <span className="uploaded-tile-detail">{detail}</span>
   </Link>
