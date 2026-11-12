@@ -156,6 +156,24 @@
   --gutter: 32px;
   --gap: 24px;
 
+  /* Uploaded dashboard palette: dark canvas with light reading cards. */
+  --dashboard-canvas: oklch(12% 0.003 80);
+  --dashboard-canvas-raised: oklch(17% 0.004 80);
+  --dashboard-canvas-edge: oklch(23% 0.005 80);
+  --dashboard-canvas-rule: oklch(31% 0.006 80);
+  --dashboard-canvas-rule-strong: oklch(50% 0.006 80);
+  --dashboard-on-canvas: oklch(96% 0.002 80);
+  --dashboard-on-canvas-soft: oklch(91% 0.003 80);
+  --dashboard-on-canvas-muted: oklch(76% 0.005 80);
+  --dashboard-card: oklch(89% 0.003 80);
+  --dashboard-card-hover: oklch(95% 0.002 80);
+  --dashboard-card-ink: oklch(17% 0.003 270);
+  --dashboard-card-ink-2: oklch(28% 0.004 80);
+  --dashboard-card-muted: oklch(39% 0.005 80);
+  --dashboard-card-rule: oklch(70% 0.004 80);
+  --dashboard-card-track: oklch(75% 0.003 80);
+  --dashboard-focus: oklch(97% 0.002 80);
+
   /* Layers. */
   --z-base: 1;
   --z-raised: 10;

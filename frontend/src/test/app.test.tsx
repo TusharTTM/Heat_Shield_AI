@@ -52,7 +52,7 @@ describe('Open-Meteo HeatShield workflows', () => {
     expect(keyCards[2]).toHaveTextContent('62%')
     expect(keyCards[3]).toHaveTextContent('UV index')
     expect(keyCards[4]).toHaveTextContent('US AQI')
-    expect(keyCards[4]).toHaveTextContent('European AQI 55')
+    expect(keyCards[4]).toHaveTextContent('125')
 
     await user.click(screen.getByText(/More measurements, daytime hours, official feed status & source details/i))
     const allCards = document.querySelectorAll('.weather-card')
@@ -81,8 +81,9 @@ describe('Open-Meteo HeatShield workflows', () => {
     await user.click(screen.getByText(/More measurements, daytime hours, official feed status & source details/i))
     const secondaryCards = document.querySelectorAll('.secondary-weather-card')
     expect(secondaryCards[0]).toHaveTextContent('12.3km/h')
-    expect(screen.getByText(/High screening risk uses a 45.4°C heat index/i)).toBeInTheDocument()
-    expect(screen.getByText(/not an official warning, physical sensor reading, or ML prediction/i)).toBeInTheDocument()
+    const alert = screen.getByLabelText('Official warnings versus model screening')
+    expect(alert).toHaveTextContent(/34.8°C model air temperature with 62% humidity creates a 45.4°C shade heat index/i)
+    expect(alert).toHaveTextContent(/Official government feed not connected/i)
   })
 
   it('provides exactly seven main navigation links and opens Forecast', async () => {
@@ -290,7 +291,9 @@ describe('Open-Meteo HeatShield workflows', () => {
     expect(statuses).toHaveLength(1)
     expect(statuses[0]).toHaveTextContent('Loading weather for Mumbai')
     expect(document.querySelectorAll('.key-readings-grid .weather-card')).toHaveLength(5)
-    expect(Array.from(document.querySelectorAll('.key-readings-grid .weather-card')).every((card) => card.textContent?.includes('—'))).toBe(true)
+    for (const card of Array.from(document.querySelectorAll('.key-readings-grid .weather-card')).slice(0, 4)) {
+      expect(card.querySelector('.uploaded-tile-value')).toHaveTextContent('—')
+    }
     expect(screen.queryByText('34.8°C')).not.toBeInTheDocument()
     resolveWeather(weatherResult())
     expect(await screen.findByRole('heading', { name: 'Temperature' })).toBeInTheDocument()
@@ -303,7 +306,9 @@ describe('Open-Meteo HeatShield workflows', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Weather unavailable for Mumbai')
     expect(screen.getByRole('alert')).toHaveTextContent('Test network outage')
     expect(document.querySelectorAll('.key-readings-grid .weather-card')).toHaveLength(5)
-    expect(Array.from(document.querySelectorAll('.key-readings-grid .weather-card')).every((card) => card.textContent?.includes('—'))).toBe(true)
+    for (const card of Array.from(document.querySelectorAll('.key-readings-grid .weather-card')).slice(0, 4)) {
+      expect(card.querySelector('.uploaded-tile-value')).toHaveTextContent('—')
+    }
     expect(screen.queryByText('34.8°C')).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Try again' }))
     expect(await screen.findByRole('heading', { name: 'Temperature' })).toBeInTheDocument()

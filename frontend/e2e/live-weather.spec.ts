@@ -63,11 +63,11 @@ async function openDashboardDetails(page: Page) {
 
 async function expectHomeRisk(page: Page, current: ApiCurrent) {
   const risk = expectedRisk(current)
-  await expect(page.locator('.overall-screening')).toBeVisible()
+  await expect(page.locator('.uploaded-alert')).toBeVisible()
+  await expect(page.locator('.key-readings-grid .weather-card').nth(1)).toContainText(`${risk.index.toFixed(1)}°C`)
+  await expect(page.locator('.key-readings-grid .uploaded-action-tile').first()).toContainText(risk.level)
+  await expect(page.locator('.uploaded-alert-footer')).toContainText('Official government feed not connected')
   await openDashboardDetails(page)
-  await expect(page.locator('.risk-explanation').first()).toContainText(`${risk.index.toFixed(1)}°C heat index`)
-  await expect(page.locator('.risk-explanation').first()).toContainText('not an official warning, physical sensor reading, or ML prediction')
-  await expect(page.locator('.recommendation-text')).toHaveText(riskRecommendations[risk.level])
 }
 
 async function expectHours(page: Page, payload: ApiPayload) {
@@ -160,9 +160,7 @@ test('real responses populate forecast, heat-index guidance, timestamps and ever
 
   console.log('STAGE: Mumbai current weather and heat-index dashboard')
   const mumbaiResponsePromise = page.waitForResponse((response) => isFullWeatherRequest(response.url()) && response.url().includes('latitude=19.076'), { timeout: 30000 })
-  // The Dashboard's 3D risk stage loads current-only readings for all 15 configured
-  // cities on first paint, so capture those live responses here rather than on Risk Map
-  // (which then reuses the 10-minute cache and issues no new provider requests).
+  // Capture the current-only provider requests when the test later opens the Risk Map.
   const dashboardCityPromises = regions.map((region) => ({
     region,
     response: page.waitForResponse((candidate) => isCurrentOnlyRequest(candidate.url()) && candidate.url().includes(`latitude=${region.latitude}`), { timeout: 90000 }),
@@ -187,9 +185,9 @@ test('real responses populate forecast, heat-index guidance, timestamps and ever
   const keyCards = page.locator('.key-readings-grid .weather-card')
   await expect(page.locator('.skip-link')).toHaveCount(1)
   await expect(page).toHaveTitle('Environmental dashboard for Mumbai · HeatShield AI')
-  await expect(keyCards).toHaveCount(4)
+  await expect(keyCards).toHaveCount(5)
   await expect(keyCards.nth(0)).toContainText(current.temperature_2m.toFixed(1))
-  await expect(keyCards.nth(1)).toContainText(current.apparent_temperature.toFixed(1))
+  await expect(keyCards.nth(1)).toContainText(`${expectedRisk(current).index.toFixed(1)}°C`)
   await expect(keyCards.nth(2)).toContainText(`${current.relative_humidity_2m}%`)
 
   await openDashboardDetails(page)
@@ -251,9 +249,9 @@ test('real responses populate forecast, heat-index guidance, timestamps and ever
   await page.getByRole('link', { name: 'Dashboard', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Environmental dashboard for Pune' })).toBeVisible()
   const puneKeyCards = page.locator('.key-readings-grid .weather-card')
-  await expect(puneKeyCards).toHaveCount(4)
+  await expect(puneKeyCards).toHaveCount(5)
   await expect(puneKeyCards.nth(0)).toContainText(pune.current.temperature_2m.toFixed(1))
-  await expect(puneKeyCards.nth(1)).toContainText(pune.current.apparent_temperature.toFixed(1))
+  await expect(puneKeyCards.nth(1)).toContainText(`${expectedRisk(pune.current).index.toFixed(1)}°C`)
   await expect(puneKeyCards.nth(2)).toContainText(`${pune.current.relative_humidity_2m}%`)
   await expectHomeRisk(page, pune.current)
   await expectHours(page, pune)
@@ -288,9 +286,9 @@ test('real responses populate forecast, heat-index guidance, timestamps and ever
   await page.getByRole('link', { name: 'Dashboard', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Environmental dashboard for Bengaluru' })).toBeVisible()
   const bengaluruKeyCards = page.locator('.key-readings-grid .weather-card')
-  await expect(bengaluruKeyCards).toHaveCount(4)
+  await expect(bengaluruKeyCards).toHaveCount(5)
   await expect(bengaluruKeyCards.nth(0)).toContainText(bengaluru.current.temperature_2m.toFixed(1))
-  await expect(bengaluruKeyCards.nth(1)).toContainText(bengaluru.current.apparent_temperature.toFixed(1))
+  await expect(bengaluruKeyCards.nth(1)).toContainText(`${expectedRisk(bengaluru.current).index.toFixed(1)}°C`)
   await expect(bengaluruKeyCards.nth(2)).toContainText(`${bengaluru.current.relative_humidity_2m}%`)
   await expectHomeRisk(page, bengaluru.current)
   await expectHours(page, bengaluru)

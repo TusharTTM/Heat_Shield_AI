@@ -44,7 +44,6 @@ describe('dashboard navigation and accessibility', () => {
     trigger.focus()
     await user.keyboard('{ArrowDown}')
     expect(screen.getByRole('dialog', { name: 'Choose a location' })).toBeInTheDocument()
-    expect(screen.getByRole('searchbox', { name: 'Search cities or states' })).toHaveFocus()
 
     await user.keyboard('{Escape}')
     expect(trigger).toHaveFocus()

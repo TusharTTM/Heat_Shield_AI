@@ -77,23 +77,16 @@ describe('1 · one screening vocabulary across every page', () => {
   })
 })
 
-describe('2 · the Air Quality card states each index once', () => {
-  it('does not repeat the European AQI inside a summary that already contains it', async () => {
+describe('2 · the Air Quality card states its chosen index once', () => {
+  it('does not repeat the selected AQI label in the card summary', async () => {
     renderApp('/')
     const card = (await screen.findByRole('heading', { name: 'Air quality' })).closest('.weather-card') as HTMLElement
     const text = card.textContent ?? ''
-    const europeanMentions = (text.match(/European AQI/g) ?? []).length
-    // At most one: the index's own label. The old summary appended a second copy.
-    expect(europeanMentions).toBeLessThanOrEqual(1)
-    expect(text).toMatch(/US AQI/)
-    // The leading index is printed once, as the metric. The reading beneath it starts
-    // with the category name, not with "US AQI 125" a second time.
-    const metric = card.querySelector('.metric-value')?.textContent ?? ''
-    const support = card.querySelector('.metric-value + p')?.textContent ?? ''
-    const leading = metric.includes('US AQI') ? 'US AQI' : 'European AQI'
-    const count = (text.match(new RegExp(leading, 'g')) ?? []).length
-    expect(count).toBe(1)
-    expect(support).not.toMatch(/US AQI \d/)
+    const value = card.querySelector('.uploaded-tile-value')
+    const selectedIndex = value?.querySelector('small')?.textContent ?? ''
+    expect(['US AQI', 'European AQI']).toContain(selectedIndex)
+    expect((text.match(/(?:US|European) AQI/g) ?? []).length).toBe(1)
+    expect(card.querySelector('.uploaded-tile-detail')).not.toHaveTextContent(/(?:US|European) AQI\s*\d/)
   })
 })
 
@@ -157,7 +150,9 @@ describe('6 · loading never looks like a result', () => {
     renderApp('/')
     expect(screen.getByRole('status')).toHaveTextContent(/Loading weather for Mumbai/i)
     expect(document.querySelectorAll('.key-readings-grid .weather-card')).toHaveLength(5)
-    expect(Array.from(document.querySelectorAll('.key-readings-grid .weather-card')).every((card) => card.textContent?.includes('—'))).toBe(true)
+    for (const card of Array.from(document.querySelectorAll('.key-readings-grid .weather-card')).slice(0, 4)) {
+      expect(card.querySelector('.uploaded-tile-value')).toHaveTextContent('—')
+    }
     const tasks = screen.getByRole('list', { name: /Suggested preparedness tasks for Mumbai/i })
     expect(within(tasks).getAllByText('Unassessed')).toHaveLength(3)
     resolveWeather(weatherResult())
