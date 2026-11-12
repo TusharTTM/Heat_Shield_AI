@@ -6,7 +6,6 @@ import {
   Droplets,
   FileText,
   Flame,
-  MapPin,
   MessageCircle,
   ShieldCheck,
   Sun,
@@ -79,14 +78,12 @@ export default function Dashboard() {
       </Link>
       <div className="dashboard-top-actions">
         <a href="#situation-alert" className="dashboard-notify"><BellRing size={17} aria-hidden="true" /><span>Notify</span></a>
-        <span className="dashboard-profile"><UserRound size={17} aria-hidden="true" /><span>Profile</span></span>
+        <div className="dashboard-profile-wrap">
+          <span className="dashboard-profile"><UserRound size={17} aria-hidden="true" /><span>Profile</span></span>
+          <CityPicker />
+        </div>
       </div>
     </header>
-
-    <div className="dashboard-location-row">
-      <div className="dashboard-location-label"><MapPin size={16} aria-hidden="true" /><span>City selection</span></div>
-      <CityPicker />
-    </div>
 
     {(warning || airWarning) && <p className="dashboard-stale-note" role="status">{warning ?? airWarning}</p>}
 

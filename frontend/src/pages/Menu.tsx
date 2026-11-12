@@ -1,5 +1,6 @@
 import { ArrowLeft, Plus, ShieldCheck, UserRound } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { ChatHistoryMenu } from '../components/ChatHistoryMenu'
 
 export default function Menu() {
   return <div className="menu-page">
@@ -17,15 +18,7 @@ export default function Menu() {
         <span>Profile</span>
       </div>
 
-      <section className="menu-history-group" aria-labelledby="pinned-history-title">
-        <h2 id="pinned-history-title">Pinned</h2>
-        <div className="menu-history-placeholder">Chat History</div>
-      </section>
-
-      <section className="menu-history-group menu-recents" aria-labelledby="recent-history-title">
-        <h2 id="recent-history-title">Recents</h2>
-        <div className="menu-history-placeholder menu-history-list">Chat History</div>
-      </section>
+      <ChatHistoryMenu variant="page" />
 
       <Link to="/assistant" className="menu-new-chat"><Plus size={18} aria-hidden="true" />New Chat</Link>
       <div className="menu-brand"><ShieldCheck size={20} aria-hidden="true" /><span>Heat Shield AI</span></div>
