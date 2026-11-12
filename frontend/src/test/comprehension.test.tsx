@@ -77,13 +77,13 @@ describe('Comprehension, progressive disclosure, keyboard accessibility, and zer
     expect(trigger).toHaveFocus()
   })
 
-  it('keeps the default Dashboard focused on warning, 3D view, actions, and 4 key readings while disclosing secondary details on demand', async () => {
+  it('keeps the default Dashboard focused on warning, 3D view, actions, and 5 key readings while disclosing secondary details on demand', async () => {
     const user = userEvent.setup()
     renderRoute('/')
     await screen.findByRole('heading', { name: 'Temperature' })
 
     expect(screen.getByLabelText('Official warnings versus model screening')).toBeInTheDocument()
-    expect(document.querySelectorAll('.key-readings-grid .weather-card')).toHaveLength(4)
+    expect(document.querySelectorAll('.key-readings-grid .weather-card')).toHaveLength(5)
     const secondaryDrawer = document.querySelector('details.secondary-details-drawer')
     expect(secondaryDrawer).not.toHaveAttribute('open')
 

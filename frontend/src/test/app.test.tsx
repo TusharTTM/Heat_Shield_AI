@@ -40,22 +40,24 @@ beforeEach(() => {
 })
 
 describe('Open-Meteo HeatShield workflows', () => {
-  it('connects current temperature, apparent temperature, humidity, wind and attribution without ML/sensor claims', async () => {
+  it('connects current temperature, heat index, humidity, UV, air quality and attribution without ML/sensor claims', async () => {
     const user = userEvent.setup()
     renderApp()
     expect(await screen.findByRole('heading', { name: 'Temperature' })).toBeInTheDocument()
     const keyCards = document.querySelectorAll('.key-readings-grid .weather-card')
-    expect(keyCards).toHaveLength(4)
+    expect(keyCards).toHaveLength(5)
     expect(keyCards[0]).toHaveTextContent('34.8°C')
-    expect(keyCards[1]).toHaveTextContent('44.9°C')
+    expect(keyCards[1]).toHaveTextContent('45.4°C')
+    expect(keyCards[1]).toHaveTextContent('Feels like 44.9°C')
     expect(keyCards[2]).toHaveTextContent('62%')
-    expect(keyCards[3]).toHaveTextContent('US AQI')
-    expect(keyCards[3]).toHaveTextContent('European AQI 55')
+    expect(keyCards[3]).toHaveTextContent('UV index')
+    expect(keyCards[4]).toHaveTextContent('US AQI')
+    expect(keyCards[4]).toHaveTextContent('European AQI 55')
 
     await user.click(screen.getByText(/More measurements, daytime hours, official feed status & source details/i))
     const allCards = document.querySelectorAll('.weather-card')
-    expect(allCards).toHaveLength(6)
-    expect(allCards[4]).toHaveTextContent('12.3km/h')
+    expect(allCards).toHaveLength(7)
+    expect(allCards[5]).toHaveTextContent('12.3km/h')
 
     expect(screen.getByText(/Open-Meteo apparent temperature/i)).toBeInTheDocument()
     const sources = screen.getByText('Sources & limits').closest('details')!
@@ -74,8 +76,8 @@ describe('Open-Meteo HeatShield workflows', () => {
     renderApp()
     await screen.findByRole('heading', { name: 'Temperature' })
     const keyCards = document.querySelectorAll('.key-readings-grid .weather-card')
-    expect(keyCards[1]).toHaveTextContent('44.9°C')
-    expect(keyCards[1]).toHaveTextContent('45.4°C heat index')
+    expect(keyCards[1]).toHaveTextContent('45.4°C')
+    expect(keyCards[1]).toHaveTextContent('Feels like 44.9°C')
 
     await user.click(screen.getByText(/More measurements, daytime hours, official feed status & source details/i))
     const secondaryCards = document.querySelectorAll('.secondary-weather-card')

@@ -188,7 +188,7 @@ describe('Dashboard action-first ordering and trimmed 3D controls', () => {
     // One deciding value only; temperature/humidity/feels-like live in the key-reading cards.
     expect(inspector.querySelectorAll('.risk-scene-inspector-metric strong')).toHaveLength(1)
     expect(within(inspector).queryByText('Humidity')).not.toBeInTheDocument()
-    expect(document.querySelectorAll('.key-readings-grid .weather-card')).toHaveLength(4)
+    expect(document.querySelectorAll('.key-readings-grid .weather-card')).toHaveLength(5)
   })
 
   it('puts per-task explanations on demand without losing them', async () => {
