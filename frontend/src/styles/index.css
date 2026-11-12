@@ -2292,6 +2292,7 @@ td {
 .uploaded-dashboard { display: flex; flex-direction: column; gap: var(--space-6); }
 .dashboard-location-row { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-3); }
 .dashboard-location-label { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--muted); font-size: var(--text-sm); }
+.dashboard-location-row .city-picker-trigger { min-height: 40px; padding-inline: var(--space-4); font-weight: 600; }
 .dashboard-shell .city-picker-trigger { min-height: 42px; padding-inline: var(--space-4); border: 0; border-radius: 999px; background: var(--plate); color: var(--plate-ink); font-weight: 600; }
 .dashboard-shell .city-picker-trigger:hover { background: var(--plate-2); }
 .dashboard-shell .city-picker-popover { --ink: var(--dashboard-card-ink); --ink-2: var(--dashboard-card-ink-2); --muted: var(--dashboard-card-muted); --plate: var(--dashboard-card-hover); --plate-2: var(--dashboard-card); --rule: var(--dashboard-card-rule); color: var(--dashboard-card-ink); }
@@ -2463,8 +2464,10 @@ td {
 .uploaded-site-shell { min-height: 100dvh; }
 .uploaded-page-content { min-height: 100dvh; }
 
-/* Masthead. Actions sit on the end edge; the city picker lives under the
- * profile chip so the top row reads as one cluster rather than three. */
+/* Masthead. Notify and Profile share the top row, centred on one baseline, so
+ * neither floats against a taller neighbour. City selection drops to its own
+ * row underneath, full width, where it reads as page context rather than a
+ * header control. */
 .dashboard-topbar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); }
 .dashboard-brand { display: inline-flex; align-items: center; gap: var(--space-3); color: var(--ink); font-size: var(--text-lg); font-weight: 600; text-decoration: none; }
 .dashboard-brand-mark {
@@ -2491,7 +2494,6 @@ td {
   text-decoration: none;
 }
 .dashboard-notify:hover { background: var(--plate); color: var(--ink); }
-.dashboard-profile-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-2); }
 .dashboard-profile {
   display: inline-flex;
   min-height: 38px;
@@ -2796,15 +2798,19 @@ td {
   .dashboard-top-actions { gap: var(--space-2); }
   .dashboard-notify { padding: 0 var(--space-2); font-size: var(--text-xs); }
   .dashboard-profile { min-height: 32px; padding-inline: var(--space-3); }
-  .dashboard-profile-wrap { gap: var(--space-1); }
-  .dashboard-profile-wrap .city-picker-trigger { max-width: 9rem; min-height: 30px; padding: 0 var(--space-2); font-size: var(--text-xs); }
-  .dashboard-profile-wrap .city-picker-popover {
-    position: fixed;
-    top: 132px;
-    right: var(--space-4);
-    left: var(--space-4);
-    width: auto;
-    max-height: calc(100dvh - 156px);
+  .dashboard-location-row { gap: var(--space-2); }
+  .dashboard-location-row .city-picker { flex: 1 1 100%; }
+  .dashboard-location-row .city-picker-trigger { justify-content: space-between; width: 100%; min-height: 38px; font-size: var(--text-sm); }
+  /* Full-bleed within the phone's gutters, but still anchored to the chip that
+   * opened it: a fixed top offset sliced through the chip whenever the row
+   * above it changed height. */
+  .dashboard-location-row .city-picker-popover {
+    position: absolute;
+    top: calc(100% + var(--space-2));
+    right: auto;
+    left: 0;
+    width: 100%;
+    max-height: min(30rem, calc(100dvh - 12rem));
   }
   .uploaded-tile { min-height: 102px; gap: var(--space-1); padding: var(--space-2); }
   .uploaded-tile-heading { gap: var(--space-1); font-size: 0.6rem; }
