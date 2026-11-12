@@ -2290,7 +2290,9 @@ td {
 .dashboard-shell .site-footer { max-width: 1120px; border-color: var(--rule); color: var(--muted); }
 
 .uploaded-dashboard { display: flex; flex-direction: column; gap: var(--space-6); }
-.dashboard-location-row { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-3); }
+/* Right-aligned so the location row balances the actions in the masthead
+ * above it, rather than hanging off the left edge on its own. */
+.dashboard-location-row { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: var(--space-3); }
 .dashboard-location-label { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--muted); font-size: var(--text-sm); }
 .dashboard-location-row .city-picker-trigger { min-height: 40px; padding-inline: var(--space-4); font-weight: 600; }
 .dashboard-shell .city-picker-trigger { min-height: 42px; padding-inline: var(--space-4); border: 0; border-radius: 999px; background: var(--plate); color: var(--plate-ink); font-weight: 600; }
