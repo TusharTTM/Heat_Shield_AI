@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import App from '../App'
 import { AppProvider } from '../context/AppContext'
@@ -11,8 +11,6 @@ vi.mock('../api/openMeteo', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../api/openMeteo')>()
   return { ...actual, getWeather: vi.fn(), getCurrentWeather: vi.fn(), getAirQuality: vi.fn() }
 })
-vi.mock('../components/ForecastChart', () => ({ ForecastChart: () => <div data-testid="forecast-chart" /> }))
-vi.mock('../components/RegionMap', () => ({ RegionMap: () => <div data-testid="offline-map" /> }))
 
 beforeEach(() => {
   cleanup()
@@ -23,24 +21,20 @@ beforeEach(() => {
   vi.mocked(getAirQuality).mockReset().mockImplementation(async (region) => airQualityResult(region.slug))
 })
 
-const routes = [
-  { path: '/', title: 'Environmental dashboard for Mumbai', documentTitle: 'Environmental dashboard for Mumbai · HeatShield AI' },
-  { path: '/monitor', title: 'Disaster Monitor', documentTitle: 'Disaster Monitor for Mumbai · HeatShield AI' },
-  { path: '/forecast', title: '5-day weather forecast', documentTitle: '5-day forecast for Mumbai · HeatShield AI' },
-  { path: '/maps', title: 'Heat and air-quality risk map', documentTitle: 'Heat and air-quality risk map for Mumbai · HeatShield AI' },
-  { path: '/alerts', title: 'Alerts', documentTitle: 'Alerts for Mumbai · HeatShield AI' },
-  { path: '/safety', title: 'Safety Guide', documentTitle: 'Safety Guide for Mumbai · HeatShield AI' },
-  { path: '/about', title: 'About HeatShield AI', documentTitle: 'About · HeatShield AI' },
+const screens = [
+  { path: '/', heading: 'Heat Shield dashboard for Mumbai', title: 'Dashboard · Heat Shield AI' },
+  { path: '/assistant', heading: 'Heat Shield AI', title: 'AI Assistant · Heat Shield AI' },
+  { path: '/menu', heading: 'Menu', title: 'Menu · Heat Shield AI' },
 ]
 
-describe('seven-section navigation', () => {
-  for (const item of routes) {
-    it(`loads ${item.path} with the shared weather provider`, () => {
+describe('uploaded screen routes', () => {
+  for (const item of screens) {
+    it(`opens ${item.path} with its matching title`, async () => {
       render(<AppProvider><WeatherProvider><MemoryRouter initialEntries={[item.path]}><App /></MemoryRouter></WeatherProvider></AppProvider>)
-      expect(screen.getByRole('heading', { name: item.title, level: 1 })).toBeInTheDocument()
-      expect(document.title).toBe(item.documentTitle)
-      expect(screen.getByRole('main')).toBeInTheDocument()
-      expect(screen.getByRole('complementary', { name: 'Environmental data status' })).toBeInTheDocument()
+      expect(await screen.findByRole('heading', { name: item.heading, level: 1 })).toBeInTheDocument()
+      await waitFor(() => expect(document.title).toBe(item.title))
+      expect(screen.getByRole('main')).toHaveAttribute('id', 'main-content')
+      expect(screen.getByRole('link', { name: 'Skip to main content' })).toHaveAttribute('href', '#main-content')
     })
   }
 })

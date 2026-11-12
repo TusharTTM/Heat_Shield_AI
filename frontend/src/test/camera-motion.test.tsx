@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import App from '../App'
@@ -50,15 +50,20 @@ describe('dashboard navigation and accessibility', () => {
     expect(screen.queryByRole('dialog', { name: 'Choose a location' })).not.toBeInTheDocument()
   })
 
-  it('opens the compact navigation from the dashboard header', async () => {
+  it('moves between the uploaded Dashboard, AI Assistant, and Menu screens', async () => {
     const user = userEvent.setup()
     renderDashboard()
-    await screen.findByRole('heading', { name: 'Temperature' })
+    await user.click(screen.getByRole('link', { name: /AI Assistant/i }))
+    expect(await screen.findByRole('heading', { name: 'Heat Shield AI' })).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Open navigation' }))
-    const navigation = screen.getByRole('navigation', { name: 'Mobile navigation' })
-    expect(navigation).toBeVisible()
-    expect(within(navigation).getByRole('link', { name: 'Forecast' })).toHaveAttribute('href', '/forecast')
-    expect(document.querySelector('canvas.risk-scene-canvas')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('link', { name: 'Menu' }))
+    expect(await screen.findByRole('heading', { name: 'Menu' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Pinned' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Recents' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('link', { name: 'New Chat' }))
+    expect(await screen.findByRole('heading', { name: 'Heat Shield AI' })).toBeInTheDocument()
+    await user.click(screen.getByRole('link', { name: 'Dashboard' }))
+    expect(await screen.findByRole('heading', { name: 'Heat Shield dashboard for Mumbai' })).toBeInTheDocument()
   })
 })
