@@ -61,7 +61,7 @@ describe('design system', () => {
     expect(sheet).toMatch(/prefers-reduced-motion:\s*reduce/)
   })
 
-  it('uses the Formwork faces and no framework defaults', () => {
+  it('uses the theme faces and no framework defaults', () => {
     expect(tokens).toContain('--font-display: "Oswald"')
     expect(tokens).toContain('--font-body: "Archivo"')
     expect(tokens).toContain('--font-outlier: "Archivo Narrow"')
@@ -87,25 +87,29 @@ describe('design system', () => {
   it('keeps the city name and state as separate blocks with a list that has no markers', () => {
     // Without a grid on the wrapper, <strong>Pune</strong><small>Maharashtra</small>
     // rendered as one unspaced run and the option's accessible name lost its space.
-    expect(sheet).toMatch(/\.city-picker-option > span \{[^}]*display:\s*grid/)
-    expect(sheet).toMatch(/\.city-picker-options \{[^}]*padding:\s*0/)
+    expect(sheet).toMatch(/\.city-picker-option-copy \{[^}]*display:\s*grid/)
     expect(sheet).toMatch(/\.city-picker-options \{[^}]*list-style:\s*none/)
     expect(sheet).toMatch(/\.city-picker-search \{[^}]*display:\s*flex/)
+    // The panel is a real surface: rounded, lifted, and anchored under its trigger.
+    expect(sheet).toMatch(/\.city-picker-popover \{[^}]*border-radius:/)
+    expect(sheet).toMatch(/\.city-picker-popover \{[^}]*box-shadow:\s*var\(--shadow-glow\)/)
+    expect(sheet).toMatch(/\.city-picker-popover \{[^}]*animation:\s*picker-in/)
   })
 
-  it('animates only the two loading indicators, so no panel can be mid-transition on a click', () => {
+  it('names every animation and keeps motion off layout properties', () => {
     const animated = [...sheet.matchAll(/animation:\s*([a-z-]+)/g)]
       .map((m) => m[1])
       .filter((name) => name !== 'none') // the reduced-motion override is not an animation
-    // Both are loading affordances. Nothing decorative moves: no panel entrance,
-    // no hover transform, no ambient loop.
-    expect([...new Set(animated)].sort()).toEqual(['loading-sweep', 'spin'])
-    // Each loading animation is switched off under reduced motion.
+    // Loading affordances plus the two entrances this theme adds: the city panel
+    // and the drawer backdrop. Nothing else is orchestrated.
+    expect([...new Set(animated)].sort()).toEqual(['fade-in', 'loading-sweep', 'picker-in', 'spin'])
+    // Every entrance and every loading indicator is switched off under reduced motion.
     const reducedMotionBlocks = [...sheet.matchAll(/@media \(prefers-reduced-motion: reduce\)\s*\{([\s\S]*?)\n\}/g)]
       .map((m) => m[1])
       .join('\n')
     expect(reducedMotionBlocks).toMatch(/\.weather-spinner\s*\{[^}]*animation:\s*none/)
     expect(reducedMotionBlocks).toMatch(/\.action-checklist-loading-line\s*\{[^}]*animation:\s*none/)
+    expect(reducedMotionBlocks).toMatch(/\.city-picker-popover\s*\{[^}]*animation:\s*none/)
   })
 
   it('carries the check stamp on the first line', () => {

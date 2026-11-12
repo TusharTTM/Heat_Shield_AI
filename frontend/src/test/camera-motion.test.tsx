@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import App from '../App'
@@ -56,14 +56,17 @@ describe('dashboard navigation and accessibility', () => {
     await user.click(screen.getByRole('link', { name: /AI Assistant/i }))
     expect(await screen.findByRole('heading', { name: 'Heat Shield AI' })).toBeInTheDocument()
 
-    await user.click(screen.getByRole('link', { name: 'Menu' }))
-    expect(await screen.findByRole('heading', { name: 'Menu' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Pinned' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Recents' })).toBeInTheDocument()
+    // Menu is a left drawer on the assistant screen, opened by its trigger.
+    await user.click(screen.getByRole('button', { name: 'Open menu' }))
+    const drawer = screen.getByRole('complementary', { name: 'Menu' })
+    expect(within(drawer).getByRole('heading', { name: 'Pinned' })).toBeInTheDocument()
+    expect(within(drawer).getByRole('heading', { name: 'Recents' })).toBeInTheDocument()
+    expect(drawer).toHaveAttribute('aria-hidden', 'false')
 
-    await user.click(screen.getByRole('link', { name: 'New Chat' }))
+    await user.click(within(drawer).getByRole('link', { name: 'New Chat' }))
     expect(await screen.findByRole('heading', { name: 'Heat Shield AI' })).toBeInTheDocument()
-    await user.click(screen.getByRole('link', { name: 'Dashboard' }))
+    // The assistant's Dashboard affordance is now a back-arrow circle.
+    await user.click(screen.getByRole('link', { name: 'Back to Dashboard' }))
     expect(await screen.findByRole('heading', { name: 'Heat Shield dashboard for Mumbai' })).toBeInTheDocument()
   })
 })
