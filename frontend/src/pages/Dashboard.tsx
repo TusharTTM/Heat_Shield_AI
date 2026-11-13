@@ -6,7 +6,6 @@ import {
   Droplets,
   FileText,
   Flame,
-  MapPin,
   MessageCircle,
   ShieldCheck,
   Sun,
@@ -83,9 +82,12 @@ export default function Dashboard() {
       </div>
     </header>
 
-    <div className="dashboard-location-row">
-      <span className="dashboard-location-label"><MapPin size={15} aria-hidden="true" /><span>City selection</span></span>
-      <CityPicker />
+    <div className="dashboard-overview">
+      <div className="dashboard-overview-copy">
+        <span className="dashboard-kicker">Your daily overview</span>
+        <p>Know the conditions. <span>Take on the day.</span></p>
+      </div>
+      <div className="dashboard-location-row"><CityPicker /></div>
     </div>
 
     {(warning || airWarning) && <p className="dashboard-stale-note" role="status">{warning ?? airWarning}</p>}
@@ -114,6 +116,10 @@ export default function Dashboard() {
       </div>
     </section>
 
+    <div className="dashboard-section-heading">
+      <div><span className="dashboard-kicker">At a glance</span><h2>Today's conditions</h2></div>
+      <span>Weather &amp; air quality</span>
+    </div>
     <section className="uploaded-metrics-grid key-readings-grid" aria-label="Dashboard readings and shortcuts">
       <MetricCard icon={Thermometer} title="Temperature" value={weather ? weather.temperature.toFixed(1) : '—'} unit={weather ? '°C' : undefined} detail="Model air temperature" />
       <MetricCard icon={Flame} title="Heat Index" value={weather ? weather.heatIndex.toFixed(1) : '—'} unit={weather ? '°C' : undefined} detail={weather ? `Feels like ${weather.apparentTemperature.toFixed(1)}°C` : 'Not assessed'} risk={heat?.level} />
