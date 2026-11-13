@@ -73,7 +73,9 @@ describe('Uploaded Heat Shield dashboard', () => {
     renderDashboard()
     await screen.findByRole('heading', { name: 'Temperature' })
 
+    expect(screen.queryByText('City selection')).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Location: Mumbai' }))
+    expect(screen.queryByText('City selection')).not.toBeInTheDocument()
     const picker = screen.getByRole('dialog', { name: 'Choose a location' })
     const search = within(picker).getByRole('searchbox', { name: 'Search cities or states' })
     await user.type(search, 'Chennai')

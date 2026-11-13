@@ -105,7 +105,6 @@ export function CityPicker() {
     {open && <div id={dialogId} className="city-picker-popover" role="dialog" aria-labelledby={titleId}>
       <div className="city-picker-heading">
         <div>
-          <span className="city-picker-eyebrow">City selection</span>
           <h2 id={titleId}>Choose a location</h2>
         </div>
         <button type="button" className="city-picker-close" aria-label="Close city picker" onClick={() => closePicker(true)}><X size={18} aria-hidden="true" /></button>
