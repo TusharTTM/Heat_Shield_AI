@@ -17,6 +17,7 @@ import { Link } from 'react-router-dom'
 import { CityPicker } from '../components/CityPicker'
 import { RiskBadge } from '../components/ui'
 import { useApp } from '../context/AppContext'
+import { useSettings } from '../context/SettingsContext'
 import { useWeather } from '../context/WeatherContext'
 import {
   buildDashboardSuggestions,
@@ -33,6 +34,7 @@ type TaskCompletionStore = Record<string, string[]>
 
 export default function Dashboard() {
   const { region } = useApp()
+  const { formatTemp, tempSymbol } = useSettings()
   const selected = getRegion(region)
   const { status, data: weather, warning, airStatus, airQuality, airWarning } = useWeather()
   const officialAlerts = useOfficialAlerts(region)
@@ -78,7 +80,7 @@ export default function Dashboard() {
       </Link>
       <div className="dashboard-top-actions">
         <a href="#situation-alert" className="dashboard-notify"><BellRing size={17} aria-hidden="true" /><span>Notify</span></a>
-        <span className="dashboard-profile"><UserRound size={17} aria-hidden="true" /><span>Profile</span></span>
+        <Link to="/profile" className="dashboard-profile"><UserRound size={17} aria-hidden="true" /><span>Profile</span></Link>
       </div>
     </header>
 
@@ -121,8 +123,8 @@ export default function Dashboard() {
       <span>Weather &amp; air quality</span>
     </div>
     <section className="uploaded-metrics-grid key-readings-grid" aria-label="Dashboard readings and shortcuts">
-      <MetricCard icon={Thermometer} title="Temperature" value={weather ? weather.temperature.toFixed(1) : '—'} unit={weather ? '°C' : undefined} detail="Model air temperature" />
-      <MetricCard icon={Flame} title="Heat Index" value={weather ? weather.heatIndex.toFixed(1) : '—'} unit={weather ? '°C' : undefined} detail={weather ? `Feels like ${weather.apparentTemperature.toFixed(1)}°C` : 'Not assessed'} risk={heat?.level} />
+      <MetricCard icon={Thermometer} title="Temperature" value={weather ? formatTemp(weather.temperature) : '—'} unit={weather ? tempSymbol : undefined} detail="Model air temperature" />
+      <MetricCard icon={Flame} title="Heat Index" value={weather ? formatTemp(weather.heatIndex) : '—'} unit={weather ? tempSymbol : undefined} detail={weather ? `Feels like ${formatTemp(weather.apparentTemperature)}${tempSymbol}` : 'Not assessed'} risk={heat?.level} />
       <MetricCard icon={Droplets} title="Humidity" value={weather ? String(weather.humidity) : '—'} unit={weather ? '%' : undefined} detail="Relative humidity" />
       <MetricCard icon={Sun} title="UV Index" value={today?.uvIndexMax == null ? '—' : today.uvIndexMax.toFixed(1)} unit={today?.uvIndexMax == null ? undefined : 'today max'} detail="Daily forecast maximum" />
       <MetricCard

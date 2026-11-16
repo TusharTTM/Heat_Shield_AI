@@ -13,10 +13,10 @@ export default function Menu() {
     </header>
 
     <section className="menu-panel" aria-label="Chat history menu">
-      <div className="menu-profile">
+      <Link to="/profile" className="menu-profile">
         <span className="menu-profile-icon"><UserRound size={20} aria-hidden="true" /></span>
         <span>Profile</span>
-      </div>
+      </Link>
 
       <ChatHistoryMenu variant="page" />
 
