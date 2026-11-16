@@ -15,6 +15,7 @@ import {
 import type { LucideIcon } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { CityPicker } from '../components/CityPicker'
+import { EarlyWarningsPanel } from '../components/EarlyWarningsPanel'
 import { RiskBadge } from '../components/ui'
 import { useApp } from '../context/AppContext'
 import { useSettings } from '../context/SettingsContext'
@@ -29,10 +30,12 @@ import { assessAirQuality, assessHeat, europeanAqiCategory, usAqiCategory } from
 import { getRegion } from '../data/regions'
 import { useLocalStorage } from '../hooks/useLocalStorage'
 import { useOfficialAlerts } from '../hooks/useOfficialData'
+import { useT } from '../i18n'
 
 type TaskCompletionStore = Record<string, string[]>
 
 export default function Dashboard() {
+  const t = useT()
   const { region } = useApp()
   const { formatTemp, tempSymbol } = useSettings()
   const selected = getRegion(region)
@@ -71,23 +74,23 @@ export default function Dashboard() {
   }
 
   return <div className="uploaded-dashboard">
-    <h1 className="sr-only">Heat Shield dashboard for {weather?.name ?? selected.name}</h1>
+    <h1 className="sr-only">{t('dash.dashboardFor', { city: weather?.name ?? selected.name })}</h1>
 
     <header className="dashboard-topbar">
       <Link to="/" className="dashboard-brand" aria-label="Heat Shield dashboard">
         <span className="dashboard-brand-mark"><ShieldCheck size={23} aria-hidden="true" /></span>
-        <span>Heat Shield</span>
+        <span>{t('dash.brand')}</span>
       </Link>
       <div className="dashboard-top-actions">
-        <a href="#situation-alert" className="dashboard-notify"><BellRing size={17} aria-hidden="true" /><span>Notify</span></a>
-        <Link to="/profile" className="dashboard-profile"><UserRound size={17} aria-hidden="true" /><span>Profile</span></Link>
+        <a href="#situation-alert" className="dashboard-notify"><BellRing size={17} aria-hidden="true" /><span>{t('dash.notify')}</span></a>
+        <Link to="/profile" className="dashboard-profile"><UserRound size={17} aria-hidden="true" /><span>{t('nav.profile')}</span></Link>
       </div>
     </header>
 
     <div className="dashboard-overview">
       <div className="dashboard-overview-copy">
-        <span className="dashboard-kicker">Your daily overview</span>
-        <p>Know the conditions. <span>Take on the day.</span></p>
+        <span className="dashboard-kicker">{t('dash.kicker')}</span>
+        <p>{t('dash.lead')} <span>{t('dash.tail')}</span></p>
       </div>
       <div className="dashboard-location-row"><CityPicker /></div>
     </div>
@@ -102,8 +105,8 @@ export default function Dashboard() {
     >
       <div className="uploaded-alert-heading">
         <div>
-          <span className="uploaded-eyebrow"><BellRing size={15} aria-hidden="true" />Situation alert · {selected.name}, {selected.state}</span>
-          <h2 id="overall-screening-title">{latestOfficialAlert ? 'Official warning active' : primaryRisk.bannerLabel}</h2>
+          <span className="uploaded-eyebrow"><BellRing size={15} aria-hidden="true" />{t('dash.situation')} · {selected.name}, {selected.state}</span>
+          <h2 id="overall-screening-title">{latestOfficialAlert ? t('dash.officialActive') : primaryRisk.bannerLabel}</h2>
         </div>
         {primaryRisk.level && <RiskBadge level={primaryRisk.level} />}
       </div>
@@ -114,38 +117,40 @@ export default function Dashboard() {
       </p>
       <div className="uploaded-alert-footer">
         <span>{primaryRisk.officialSummary.headline}</span>
-        <span className="alert-model-label">Weather model screening</span>
+        <span className="alert-model-label">{t('dash.modelScreening')}</span>
       </div>
     </section>
 
+    <EarlyWarningsPanel />
+
     <div className="dashboard-section-heading">
-      <div><span className="dashboard-kicker">At a glance</span><h2>Today's conditions</h2></div>
-      <span>Weather &amp; air quality</span>
+      <div><span className="dashboard-kicker">{t('dash.atAGlance')}</span><h2>{t('dash.conditions')}</h2></div>
+      <span>{t('dash.weatherAir')}</span>
     </div>
     <section className="uploaded-metrics-grid key-readings-grid" aria-label="Dashboard readings and shortcuts">
-      <MetricCard icon={Thermometer} title="Temperature" value={weather ? formatTemp(weather.temperature) : '—'} unit={weather ? tempSymbol : undefined} detail="Model air temperature" />
-      <MetricCard icon={Flame} title="Heat Index" value={weather ? formatTemp(weather.heatIndex) : '—'} unit={weather ? tempSymbol : undefined} detail={weather ? `Feels like ${formatTemp(weather.apparentTemperature)}${tempSymbol}` : 'Not assessed'} risk={heat?.level} />
-      <MetricCard icon={Droplets} title="Humidity" value={weather ? String(weather.humidity) : '—'} unit={weather ? '%' : undefined} detail="Relative humidity" />
-      <MetricCard icon={Sun} title="UV Index" value={today?.uvIndexMax == null ? '—' : today.uvIndexMax.toFixed(1)} unit={today?.uvIndexMax == null ? undefined : 'today max'} detail="Daily forecast maximum" />
+      <MetricCard icon={Thermometer} title={t('metric.temperature')} value={weather ? formatTemp(weather.temperature) : '—'} unit={weather ? tempSymbol : undefined} detail={t('metric.modelAirTemp')} />
+      <MetricCard icon={Flame} title={t('metric.heatIndex')} value={weather ? formatTemp(weather.heatIndex) : '—'} unit={weather ? tempSymbol : undefined} detail={weather ? t('metric.feelsLike', { value: `${formatTemp(weather.apparentTemperature)}${tempSymbol}` }) : t('metric.notAssessed')} risk={heat?.level} />
+      <MetricCard icon={Droplets} title={t('metric.humidity')} value={weather ? String(weather.humidity) : '—'} unit={weather ? '%' : undefined} detail={t('metric.relativeHumidity')} />
+      <MetricCard icon={Sun} title={t('metric.uvIndex')} value={today?.uvIndexMax == null ? '—' : today.uvIndexMax.toFixed(1)} unit={today?.uvIndexMax == null ? undefined : 'today max'} detail={t('metric.dailyMax')} />
       <MetricCard
         icon={CloudSun}
-        title="Air Quality"
+        title={t('metric.airQuality')}
         value={primaryAqi ? primaryAqi.value.toFixed(0) : airStatus === 'loading' ? '…' : '—'}
         unit={primaryAqi?.label}
-        detail={primaryAqi ? `${primaryAqi.category} · CAMS model` : airAssessment ? 'Modelled AQI unavailable' : 'Not assessed'}
+        detail={primaryAqi ? `${primaryAqi.category} · CAMS model` : airAssessment ? 'Modelled AQI unavailable' : t('metric.notAssessed')}
         risk={airAssessment?.level}
       />
-      <ActionCard icon={ShieldCheck} title="Heat Risk" value={heat?.level ?? 'Unassessed'} detail="Heat-index screening" />
-      <ActionCard icon={FileText} title="Reports" value={officialAlerts.status === 'ready' ? String(officialAlerts.data?.count ?? 0) : '—'} detail="Official warnings" />
-      <ActionCard icon={MessageCircle} title="AI Assistant" value="Open" detail="Ask Heat Shield" to="/assistant" />
+      <ActionCard icon={ShieldCheck} title={t('metric.heatRisk')} value={heat?.level ?? 'Unassessed'} detail={t('metric.heatScreening')} />
+      <ActionCard icon={FileText} title={t('metric.reports')} value={officialAlerts.status === 'ready' ? String(officialAlerts.data?.count ?? 0) : '—'} detail={t('metric.officialWarnings')} />
+      <ActionCard icon={MessageCircle} title={t('metric.assistant')} value={t('metric.open')} detail={t('metric.ask')} to="/assistant" />
     </section>
 
     <div className="uploaded-dashboard-lower-grid">
       <section className="uploaded-panel" aria-labelledby="dashboard-suggestions-title">
         <div className="uploaded-panel-heading">
           <div>
-            <span className="uploaded-eyebrow">Rule-based safety suggestions</span>
-            <h2 id="dashboard-suggestions-title">AI suggestions</h2>
+            <span className="uploaded-eyebrow">{t('dash.suggestionsKicker')}</span>
+            <h2 id="dashboard-suggestions-title">{t('dash.suggestionsTitle')}</h2>
           </div>
         </div>
         {suggestions.length > 0 ? <ul className="uploaded-suggestion-list" aria-label={`Suggested precautions for ${selected.name}`}>
@@ -162,22 +167,22 @@ export default function Dashboard() {
               </label>
             </li>
           })}
-        </ul> : <p className="uploaded-empty-copy">Suggestions will appear when readings are available.</p>}
+        </ul> : <p className="uploaded-empty-copy">{t('dash.suggestionsEmpty')}</p>}
       </section>
 
       <section className="uploaded-panel mission-panel" aria-labelledby="dashboard-progress-title">
         <div className="uploaded-panel-heading">
           <div>
-            <span className="uploaded-eyebrow">Your daily checklist</span>
-            <h2 id="dashboard-progress-title">Heat mission progress</h2>
+            <span className="uploaded-eyebrow">{t('dash.progressKicker')}</span>
+            <h2 id="dashboard-progress-title">{t('dash.progressTitle')}</h2>
           </div>
         </div>
         <div className="mission-progress-copy">
           <strong>{progress.completedCount}<span>/{progress.totalCount}</span></strong>
-          <p>{progress.completedCount === progress.totalCount && progress.totalCount > 0 ? 'Daily plan complete' : 'precautions completed today'}</p>
+          <p>{progress.completedCount === progress.totalCount && progress.totalCount > 0 ? t('dash.dailyPlanComplete') : t('dash.precautionsCompleted')}</p>
         </div>
         <progress value={progress.percent} max={100} aria-label={`Heat mission progress: ${progress.percent}%`} />
-        <div className="mission-progress-footer"><span>{progress.percent}% complete</span></div>
+        <div className="mission-progress-footer"><span>{t('dash.percentComplete', { percent: progress.percent })}</span></div>
       </section>
     </div>
   </div>

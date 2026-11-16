@@ -1,3 +1,5 @@
+import { translate, type MessageKey } from './i18n'
+import type { LanguageCode } from './context/SettingsContext'
 import { LayoutDashboard, MessageCircle, Menu as MenuIcon, type LucideIcon } from 'lucide-react'
 
 export interface NavItem {
@@ -12,13 +14,14 @@ export const navigation: NavItem[] = [
   { label: 'Menu', path: '/menu', icon: MenuIcon },
 ]
 
-export function getDocumentTitle(pathname: string): string {
+const titleKeys: Record<string, MessageKey> = {
+  '/': 'nav.dashboard',
+  '/assistant': 'nav.assistant',
+  '/menu': 'nav.menu',
+  '/profile': 'nav.profile',
+}
+
+export function getDocumentTitle(pathname: string, language: LanguageCode = 'en'): string {
   const normalized = pathname === '/' ? pathname : pathname.replace(/\/+$/, '')
-  const titles: Record<string, string> = {
-    '/': 'Dashboard',
-    '/assistant': 'AI Assistant',
-    '/menu': 'Menu',
-    '/profile': 'Profile',
-  }
-  return `${titles[normalized] ?? 'Dashboard'} · Heat Shield AI`
+  return `${translate(language, titleKeys[normalized] ?? 'nav.dashboard')} · Heat Shield AI`
 }

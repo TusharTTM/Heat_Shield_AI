@@ -116,6 +116,37 @@ describe('profile page', () => {
     })
   })
 
+  it('saves the alert lead time', async () => {
+    renderAt('/profile')
+    fireEvent.change(screen.getByLabelText('Alert lead time'), { target: { value: '24' } })
+    await waitFor(() => expect(readSettings().heatAlerts?.leadHours).toBe(24))
+  })
+
+  it('saves the language preference and updates the document language', async () => {
+    renderAt('/profile')
+    fireEvent.change(screen.getByLabelText('Language'), { target: { value: 'ta' } })
+    await waitFor(() => expect(readSettings().display?.language).toBe('ta'))
+    expect(document.documentElement.lang).toBe('ta')
+  })
+
+  it('enables browser notifications when the browser grants permission', async () => {
+    const requestPermission = vi.fn(async () => 'granted' as NotificationPermission)
+    class FakeNotification {
+      static permission = 'default' as NotificationPermission
+      static requestPermission = requestPermission
+      constructor(_title: string, _options?: NotificationOptions) {}
+    }
+    vi.stubGlobal('Notification', FakeNotification)
+    try {
+      renderAt('/profile')
+      fireEvent.click(screen.getByRole('switch', { name: 'Browser notifications' }))
+      await waitFor(() => expect(readSettings().hydration?.browserNotifications).toBe(true))
+      expect(requestPermission).toHaveBeenCalled()
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
   it('signs out and returns to the dashboard', async () => {
     renderAt('/profile')
     fireEvent.click(screen.getByRole('button', { name: /sign out/i }))
