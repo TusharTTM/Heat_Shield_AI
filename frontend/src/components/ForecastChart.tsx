@@ -2,12 +2,14 @@ import { useMemo } from 'react'
 import { Line } from 'react-chartjs-2'
 import { CategoryScale, Chart as ChartJS, LinearScale, LineElement, PointElement, Tooltip, Legend, type ChartOptions } from 'chart.js'
 import { useApp } from '../context/AppContext'
+import { useSettings } from '../context/SettingsContext'
 import type { ForecastDay } from '../types'
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend)
+ChartJS.register(CategoryScale, LinearScale, LineElement, PointElement, Tooltip, Legend)
 
 export function ForecastChart({ days, height = 300, source = 'demo' }: { days: ForecastDay[]; height?: number; source?: 'demo' | 'open-meteo' }) {
   const { reducedMotion } = useApp()
+  const { convertTemp, tempSymbol, tempName } = useSettings()
   const sourceLabel = source === 'open-meteo' ? 'Open-Meteo model' : 'Demo'
   const hottest = days.reduce((peak, day) => day.max > peak.max ? day : peak)
   const data = useMemo(() => ({
@@ -15,7 +17,7 @@ export function ForecastChart({ days, height = 300, source = 'demo' }: { days: F
     datasets: [
       {
         label: `${sourceLabel} daily high`,
-        data: days.map((day) => day.max),
+        data: days.map((day) => convertTemp(day.max)),
         borderColor: '#b94d22',
         backgroundColor: '#ffffff',
         pointBackgroundColor: days.map((day) => day.date === hottest.date ? '#9f3f1b' : '#b94d22'),
@@ -28,7 +30,7 @@ export function ForecastChart({ days, height = 300, source = 'demo' }: { days: F
       },
       {
         label: `${sourceLabel} daily low`,
-        data: days.map((day) => day.min),
+        data: days.map((day) => convertTemp(day.min)),
         borderColor: '#337d86',
         backgroundColor: '#ffffff',
         pointBackgroundColor: '#337d86',
@@ -41,7 +43,7 @@ export function ForecastChart({ days, height = 300, source = 'demo' }: { days: F
         tension: 0.3,
       },
     ],
-  }), [days, hottest.date, sourceLabel])
+  }), [convertTemp, days, hottest.date, sourceLabel])
 
   const options: ChartOptions<'line'> = {
     responsive: true,
@@ -63,15 +65,15 @@ export function ForecastChart({ days, height = 300, source = 'demo' }: { days: F
         displayColors: true,
         callbacks: {
           title: (items) => items[0] ? days[items[0].dataIndex].fullLabel : '',
-          label: (context) => ` ${(context.parsed.y ?? 0).toFixed(1)}°C · ${context.dataset.label}`,
+          label: (context) => ` ${(context.parsed.y ?? 0).toFixed(1)}${tempSymbol} · ${context.dataset.label}`,
         },
       },
     },
     scales: {
       x: { grid: { display: false }, ticks: { color: '#59656f', font: { size: 12 }, maxRotation: 0, autoSkip: false }, border: { display: false } },
       y: {
-        suggestedMin: Math.floor(Math.min(...days.map((day) => day.min)) - 2),
-        suggestedMax: Math.ceil(Math.max(...days.map((day) => day.max)) + 2),
+        suggestedMin: Math.floor(Math.min(...days.map((day) => convertTemp(day.min))) - 2),
+        suggestedMax: Math.ceil(Math.max(...days.map((day) => convertTemp(day.max))) + 2),
         grid: { color: '#dfe5e9' },
         border: { display: false },
         ticks: { color: '#59656f', font: { size: 12 }, callback: (value) => `${value}°` },
@@ -79,9 +81,9 @@ export function ForecastChart({ days, height = 300, source = 'demo' }: { days: F
     },
   }
 
-  const highs = days.map((day) => `${day.fullLabel}: ${day.max.toFixed(1)} degrees Celsius`).join('; ')
-  const lows = days.map((day) => `${day.fullLabel}: ${day.min.toFixed(1)} degrees Celsius`).join('; ')
-  const ariaLabel = `Five-day ${sourceLabel} daily high and low temperature chart from ${days[0].fullLabel} to ${days[days.length - 1].fullLabel}. Highs: ${highs}. Lows: ${lows}. ${hottest.fullLabel} is hottest at ${hottest.max.toFixed(1)} degrees Celsius.${source === 'demo' ? ' Not a current forecast.' : ' Weather-model estimates, not AI/ML predictions.'}`
+  const highs = days.map((day) => `${day.fullLabel}: ${convertTemp(day.max).toFixed(1)} degrees ${tempName}`).join('; ')
+  const lows = days.map((day) => `${day.fullLabel}: ${convertTemp(day.min).toFixed(1)} degrees ${tempName}`).join('; ')
+  const ariaLabel = `Five-day ${sourceLabel} daily high and low temperature chart from ${days[0].fullLabel} to ${days[days.length - 1].fullLabel}. Highs: ${highs}. Lows: ${lows}. ${hottest.fullLabel} is hottest at ${convertTemp(hottest.max).toFixed(1)} degrees ${tempName}.${source === 'demo' ? ' Not a current forecast.' : ' Weather-model estimates, not AI/ML predictions.'}`
 
   return <div className="chart-container" style={{ height }}><Line data={data} options={options} role="img" aria-label={ariaLabel} /></div>
 }

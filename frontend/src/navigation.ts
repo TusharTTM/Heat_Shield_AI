@@ -18,6 +18,7 @@ export function getDocumentTitle(pathname: string): string {
     '/': 'Dashboard',
     '/assistant': 'AI Assistant',
     '/menu': 'Menu',
+    '/profile': 'Profile',
   }
   return `${titles[normalized] ?? 'Dashboard'} · Heat Shield AI`
 }

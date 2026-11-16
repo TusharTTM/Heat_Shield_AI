@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
+import { HydrationReminder } from './HydrationReminder'
 import { getDocumentTitle } from '../navigation'
 
 export function Layout() {
@@ -21,5 +22,6 @@ export function Layout() {
     <main ref={mainContent} id="main-content" className="page-content uploaded-page-content" tabIndex={-1}>
       <Outlet />
     </main>
+    <HydrationReminder />
   </div>
 }

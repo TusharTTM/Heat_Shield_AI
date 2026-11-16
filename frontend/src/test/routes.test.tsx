@@ -25,6 +25,7 @@ const screens = [
   { path: '/', heading: 'Heat Shield dashboard for Mumbai', title: 'Dashboard · Heat Shield AI' },
   { path: '/assistant', heading: 'Heat Shield AI', title: 'AI Assistant · Heat Shield AI' },
   { path: '/menu', heading: 'Menu', title: 'Menu · Heat Shield AI' },
+  { path: '/profile', heading: 'Profile', title: 'Profile · Heat Shield AI' },
 ]
 
 describe('uploaded screen routes', () => {
