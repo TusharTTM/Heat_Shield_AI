@@ -16,6 +16,7 @@ import {
 import type { LucideIcon } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { CityPicker } from '../components/CityPicker'
+import { DayPlanner } from '../components/DayPlanner'
 import { EarlyWarningsPanel } from '../components/EarlyWarningsPanel'
 import { RiskBadge } from '../components/ui'
 import { useApp } from '../context/AppContext'
@@ -124,6 +125,7 @@ export default function Dashboard() {
     </section>
 
     <EarlyWarningsPanel />
+    <DayPlanner />
 
     <div className="dashboard-section-heading">
       <div><span className="dashboard-kicker">{t('dash.atAGlance')}</span><h2>{t('dash.conditions')}</h2></div>

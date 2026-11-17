@@ -1,7 +1,7 @@
 import { getSimpleRisk, heatIndexC, riskFromHeatIndex } from '../data/heat'
 import type {
   AirQualityData, AirQualityHour, AirQualityResult, AirQualityValues, CurrentWeather, CurrentWeatherResult,
-  ForecastDay, HistoricalData, Region, TodayHour, WeatherResult,
+  ForecastDay, HistoricalData, PlannerHour, Region, TodayHour, WeatherResult,
 } from '../types'
 
 export const OPEN_METEO_FORECAST_URL = 'https://api.open-meteo.com/v1/forecast'
@@ -274,6 +274,43 @@ function parseHours(payload: RawPayload): TodayHour[] {
   })
 }
 
+const plannerHourFormatter = new Intl.DateTimeFormat('en-IN', { hour: 'numeric', timeZone: 'UTC' })
+
+/** Open-Meteo returns local "YYYY-MM-DDTHH:MM" strings read as UTC; tolerate explicit offsets too. */
+function toUtcDate(value: string): Date {
+  return new Date(/Z$|[+-]\d{2}:\d{2}$/.test(value) ? value : `${value}Z`)
+}
+
+/** Next 24 modelled hours from the model's current time, for the day planner. */
+function parseNext24Hours(payload: RawPayload): PlannerHour[] {
+  const hourly = payload.hourly
+  const currentTime = payload.current?.time
+  if (!hourly || !Array.isArray(hourly.time) || !Array.isArray(hourly.temperature_2m) || typeof currentTime !== 'string') return []
+  const times = hourly.time as unknown[]
+  const temperatures = hourly.temperature_2m as unknown[]
+  const humidities = Array.isArray(hourly.relative_humidity_2m) ? hourly.relative_humidity_2m as unknown[] : []
+  const start = times.findIndex((value) => typeof value === 'string' && value >= currentTime.slice(0, 13))
+  const first = start >= 0 ? start : 0
+  const hours: PlannerHour[] = []
+  for (let index = first; index < times.length && hours.length < 24; index += 1) {
+    const isoTime = times[index]
+    if (typeof isoTime !== 'string') continue
+    const temperature = Number(temperatures[index])
+    if (temperatures[index] === null || temperatures[index] === undefined || !Number.isFinite(temperature)) continue
+    const rawHumidity = humidities[index]
+    const humidity = rawHumidity === null || rawHumidity === undefined ? null : Number(rawHumidity)
+    const parsed = toUtcDate(isoTime)
+    if (!Number.isFinite(parsed.getTime())) continue
+    hours.push({
+      isoTime: parsed.toISOString(),
+      label: plannerHourFormatter.format(parsed).toUpperCase(),
+      temperature,
+      humidity: humidity !== null && Number.isFinite(humidity) && humidity >= 0 && humidity <= 100 ? humidity : null,
+    })
+  }
+  return hours
+}
+
 const AIR_QUALITY_FIELDS = [
   ['usAqi', 'us_aqi', 0, 1000],
   ['europeanAqi', 'european_aqi', 0, 1000],
@@ -357,7 +394,7 @@ export async function getWeather(region: Region, force = false): Promise<Weather
     const current = parseCurrent(region, payload)
     const forecast = parseForecast(payload)
     const hours = parseHours(payload)
-    return { ...current, forecast, hours }
+    return { ...current, forecast, hours, next24Hours: parseNext24Hours(payload) }
   })
 }
 

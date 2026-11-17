@@ -21,6 +21,16 @@ export function weatherFixture(slug = 'mumbai'): WeatherData {
       time: `${hour > 12 ? hour - 12 : hour} ${hour < 12 ? 'AM' : 'PM'}`,
       temperature: sample.temperature + [-4.7, -2.1, -0.5, 0.3, -0.8, -2][index],
     })),
+    next24Hours: Array.from({ length: 24 }, (_, index) => {
+      const isoTime = new Date(Date.UTC(2026, 10, 8, 9 + index)).toISOString()
+      const phase = ((index + 6) / 24) * 2 * Math.PI
+      return {
+        isoTime,
+        label: new Intl.DateTimeFormat('en-IN', { hour: 'numeric', timeZone: 'UTC' }).format(new Date(Date.UTC(2026, 10, 8, 9 + index))).toUpperCase(),
+        temperature: Math.round((sample.temperature + 3.5 * Math.sin(phase - Math.PI / 2)) * 10) / 10,
+        humidity: Math.round(Math.max(30, Math.min(95, 65 - 20 * Math.sin(phase - Math.PI / 2)))),
+      }
+    }),
   }
 }
 
@@ -29,9 +39,10 @@ export function weatherResult(slug = 'mumbai'): WeatherResult {
 }
 
 export function currentResult(slug = 'mumbai'): CurrentWeatherResult {
-  const { forecast, hours, ...current } = weatherFixture(slug)
+  const { forecast, hours, next24Hours, ...current } = weatherFixture(slug)
   void forecast
   void hours
+  void next24Hours
   return { data: current, freshness: 'current', fromCache: false }
 }
 

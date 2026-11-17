@@ -18,6 +18,16 @@ The website connects directly to **Open-Meteo** for current weather, hourly valu
 
 The responsive interface supports mobile, tablet, desktop, keyboard operation, reduced motion, and legacy redirects. Region selection persists only in the current browser.
 
+## Heat-risk day planner (dashboard)
+
+The dashboard includes a non-AI day planner that screens the modelled hourly forecast for the selected city over the next 24 hours. It highlights the hours with the highest screened heat, points out comparatively lower-heat windows for planning outdoor time, and lets you compare six-hour blocks — all from the forecast data the site already loads. User-facing limitations:
+
+- All values are **model estimates** (Open-Meteo weather model), not official warnings, station observations, or medical advice.
+- "Lower heat" is only comparative. **No period is ever presented as completely safe** — heat stress is still possible in any window.
+- Hours the model cannot screen (for example, missing humidity) are shown as **unknown, never as an all-clear**.
+- The planner never requests or transmits precise location (only the selected city) or any personal health information.
+- Long limitation notes and source labels are in English, matching the site's other technical disclosures.
+
 ## Run the frontend
 
 Requirements: Node.js 22+ and npm. No credentials or environment file are required.

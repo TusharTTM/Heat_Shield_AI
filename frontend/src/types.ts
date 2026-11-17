@@ -53,9 +53,22 @@ export interface TodayHour {
   temperature: number
 }
 
+/** One modelled forecast hour for the day planner (next-24-hours window). */
+export interface PlannerHour {
+  /** ISO timestamp of the modelled hour (UTC). */
+  isoTime: string
+  /** Display label in the app's clock format, e.g. "2 PM". */
+  label: string
+  temperature: number
+  /** Relative humidity percent when the model supplies it; null keeps the hour unscreened. */
+  humidity: number | null
+}
+
 export interface WeatherData extends CurrentWeather {
   forecast: ForecastDay[]
   hours: TodayHour[]
+  /** Modelled hours from "now" for the heat-risk day planner. */
+  next24Hours: PlannerHour[]
 }
 
 export interface WeatherResult {
