@@ -6,6 +6,7 @@ import {
   Droplets,
   FileText,
   Flame,
+  Menu as MenuIcon,
   MessageCircle,
   ShieldCheck,
   Sun,
@@ -82,7 +83,8 @@ export default function Dashboard() {
         <span>{t('dash.brand')}</span>
       </Link>
       <div className="dashboard-top-actions">
-        <a href="#situation-alert" className="dashboard-notify"><BellRing size={17} aria-hidden="true" /><span>{t('dash.notify')}</span></a>
+        <a href="#situation-alert" className="dashboard-notify" aria-label={t('dash.notify')}><BellRing size={17} aria-hidden="true" /><span className="dashboard-action-label">{t('dash.notify')}</span></a>
+        <Link to="/menu" className="dashboard-notify" aria-label={t('nav.menu')}><MenuIcon size={17} aria-hidden="true" /><span className="dashboard-action-label">{t('nav.menu')}</span></Link>
         <Link to="/profile" className="dashboard-profile"><UserRound size={17} aria-hidden="true" /><span>{t('nav.profile')}</span></Link>
       </div>
     </header>
@@ -105,7 +107,7 @@ export default function Dashboard() {
     >
       <div className="uploaded-alert-heading">
         <div>
-          <span className="uploaded-eyebrow"><BellRing size={15} aria-hidden="true" />{t('dash.situation')} · {selected.name}, {selected.state}</span>
+          <span className="uploaded-eyebrow"><BellRing size={15} aria-hidden="true" />{t('dash.situation')} · <span className="uploaded-alert-place">{selected.name}, {selected.state}</span></span>
           <h2 id="overall-screening-title">{latestOfficialAlert ? t('dash.officialActive') : primaryRisk.bannerLabel}</h2>
         </div>
         {primaryRisk.level && <RiskBadge level={primaryRisk.level} />}
@@ -131,7 +133,7 @@ export default function Dashboard() {
       <MetricCard icon={Thermometer} title={t('metric.temperature')} value={weather ? formatTemp(weather.temperature) : '—'} unit={weather ? tempSymbol : undefined} detail={t('metric.modelAirTemp')} />
       <MetricCard icon={Flame} title={t('metric.heatIndex')} value={weather ? formatTemp(weather.heatIndex) : '—'} unit={weather ? tempSymbol : undefined} detail={weather ? t('metric.feelsLike', { value: `${formatTemp(weather.apparentTemperature)}${tempSymbol}` }) : t('metric.notAssessed')} risk={heat?.level} />
       <MetricCard icon={Droplets} title={t('metric.humidity')} value={weather ? String(weather.humidity) : '—'} unit={weather ? '%' : undefined} detail={t('metric.relativeHumidity')} />
-      <MetricCard icon={Sun} title={t('metric.uvIndex')} value={today?.uvIndexMax == null ? '—' : today.uvIndexMax.toFixed(1)} unit={today?.uvIndexMax == null ? undefined : 'today max'} detail={t('metric.dailyMax')} />
+      <MetricCard icon={Sun} title={t('metric.uvIndex')} value={today?.uvIndexMax == null ? '—' : today.uvIndexMax.toFixed(1)} unit={today?.uvIndexMax == null ? undefined : 'max'} detail={t('metric.dailyMax')} />
       <MetricCard
         icon={CloudSun}
         title={t('metric.airQuality')}
@@ -205,7 +207,7 @@ function MetricCard({
 }) {
   return <article className={`uploaded-tile weather-card${risk ? ` risk-${risk}` : ''}`}>
     <h2 className="uploaded-tile-heading"><Icon size={17} aria-hidden="true" /><span>{title}</span></h2>
-    <strong className="uploaded-tile-value">{value}{unit && <small>{unit}</small>}</strong>
+    <strong className={`uploaded-tile-value${value === '—' ? ' uploaded-tile-value--empty' : ''}`}>{value}{unit && <small>{unit}</small>}</strong>
     <span className="uploaded-tile-detail">{detail}</span>
   </article>
 }
@@ -225,7 +227,7 @@ function ActionCard({
 }) {
   const content = <>
     <h2 className="uploaded-tile-heading"><Icon size={17} aria-hidden="true" /><span>{title}</span></h2>
-    <strong className="uploaded-action-value">{value}</strong>
+    <strong className={`uploaded-action-value${value === '—' ? ' uploaded-action-value--empty' : ''}`}>{value}</strong>
     <span className="uploaded-tile-detail">{detail}</span>
   </>
 

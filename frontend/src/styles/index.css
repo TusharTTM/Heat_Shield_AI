@@ -2332,7 +2332,9 @@ td {
 .uploaded-alert.risk-high { --alert-state: var(--risk-warning); }
 .uploaded-alert.risk-extreme { --alert-state: var(--risk-severe); }
 .uploaded-alert-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); }
-.uploaded-eyebrow { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--dashboard-card-ink-2); font-size: var(--text-sm); font-weight: 600; }
+.uploaded-alert-heading > div { min-width: 0; }
+.uploaded-eyebrow { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); row-gap: var(--space-1); color: var(--dashboard-card-ink-2); font-size: var(--text-sm); font-weight: 600; }
+.uploaded-alert-place { white-space: nowrap; }
 .uploaded-alert h2 { margin-top: var(--space-2); color: var(--dashboard-card-ink); font-family: var(--font-body); font-size: var(--text-2xl); font-weight: 700; letter-spacing: 0; text-transform: none; }
 .uploaded-alert .risk-badge { border-color: transparent; }
 .uploaded-alert-summary { margin-top: var(--space-3); color: var(--dashboard-card-ink-2); }
@@ -2385,7 +2387,7 @@ td {
 .uploaded-tile.risk-extreme { box-shadow: inset 0 3px 0 var(--risk-severe); }
 .uploaded-action-value { color: var(--ink); font-family: var(--font-body); font-size: var(--text-xl); font-weight: 700; }
 
-.uploaded-dashboard-lower-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+.uploaded-dashboard-lower-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: var(--space-4); }
 .uploaded-panel { min-width: 0; padding: var(--space-5); border: var(--rule-hair) solid var(--rule); border-radius: var(--radius); background: var(--plate); color: var(--ink); box-shadow: var(--shadow); }
 .uploaded-panel-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); }
 .uploaded-panel-heading .uploaded-eyebrow { color: var(--dashboard-card-muted); }
@@ -2969,6 +2971,27 @@ td {
   .mission-progress-copy p { font-size: var(--text-sm); }
   .mission-progress-footer { font-size: var(--text-xs); }
   .mission-panel progress { height: 10px; margin-top: var(--space-4); }
+}
+
+/* Placeholder values ("—") must read as absent data, not as a stray horizontal
+ * rule where a reading should be. */
+.uploaded-tile-value--empty,
+.uploaded-action-value--empty {
+  color: var(--dashboard-card-muted);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  font-weight: 500;
+  letter-spacing: 0;
+}
+@media (max-width: 680px) {
+  .uploaded-tile-value--empty,
+  .uploaded-action-value--empty { font-size: var(--text-sm); }
+}
+/* Below phone-narrow widths the top actions keep their icons and drop their
+ * labels; each action carries an aria-label so the accessible name survives. */
+@media (max-width: 560px) {
+  .dashboard-top-actions .dashboard-action-label { display: none; }
+  .dashboard-top-actions .dashboard-notify { padding: 0 var(--space-2); }
 }
 
 /* --- Profile & settings --------------------------------------------------- */
