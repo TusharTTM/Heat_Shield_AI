@@ -13,7 +13,7 @@ npm test
 GITHUB_PAGES=true npm run build
 ```
 
-`.github/workflows/deploy-pages.yml` builds and deploys this static bundle on the configured branch paths (verified in run `42584079221`). The browser calls Open-Meteo directly and caches responses; no backend URL or frontend credential is required for weather/CAMS. To enable the optional official-source panels, set the non-secret `VITE_API_BASE_URL` variable on the **github-pages** environment to an HTTPS FastAPI origin. If it is empty, those panels explicitly report that the backend is not configured. Never put the data.gov.in key, database password, sensor key or other secrets in `VITE_*` values. `.github/workflows/verify-open-meteo.yml` runs real Open-Meteo/CAMS/archive Vitest checks, a Chromium test (`live-weather.spec.ts`) against local Vite (`42584079253`) or hosted GitHub Pages (`42584410097`), and a live FastAPI + NDMA SACHET RSS/CAP + CPCB fail-closed check (`live-backend-and-official-sources`). Mocked official-panel browser flows at `1440x1000` and `390x844` run in `.github/workflows/verify-integrations.yml` (`official-sources-browser`, run `42584079125`).
+`.github/workflows/deploy-pages.yml` builds and deploys this static bundle on the configured branch paths (verified in run `42584079221`). The browser calls Open-Meteo directly and caches responses; no backend URL or frontend credential is required for weather/CAMS. To enable the optional official-source panels, set the non-secret `VITE_API_BASE_URL` variable on the **github-pages** environment to an HTTPS FastAPI origin. If it is empty, those panels explicitly report that the backend is not configured. The AI Assistant behaves the same way: without `VITE_API_BASE_URL` its page shows an explicit "Assistant service not configured" setup notice instead of any answer (see section 7). Never put the data.gov.in key, database password, sensor key or other secrets in `VITE_*` values. `.github/workflows/verify-open-meteo.yml` runs real Open-Meteo/CAMS/archive Vitest checks, a Chromium test (`live-weather.spec.ts`) against local Vite (`42584079253`) or hosted GitHub Pages (`42584410097`), and a live FastAPI + NDMA SACHET RSS/CAP + CPCB fail-closed check (`live-backend-and-official-sources`). Mocked official-panel browser flows at `1440x1000` and `390x844` run in `.github/workflows/verify-integrations.yml` (`official-sources-browser`, run `42584079125`).
 
 Verify the deployed Home, Forecast, Maps, Safety, and About documents/assets. Browser interaction must be checked separately from text/asset retrieval.
 
@@ -113,7 +113,28 @@ curl --fail -X POST "$API_ORIGIN/api/v1/sensors/readings" \
 
 Use a current timestamp in a real request. Then query the private reading/status endpoints with the same key. This verifies software only; physical ESP32 status requires firmware compilation/upload, valid CA/NTP/Wi-Fi, DHT22 readings, and `source=physical` responses from the actual device.
 
-## 7. Evidence checklist
+## 7. AI assistant configuration
+
+The AI Assistant page talks only to the FastAPI backend (`POST /api/v1/assistant/chat`); the browser never holds an AI provider key. Configure the backend with:
+
+- `ASSISTANT_API_KEY` — server-only and required. Without it the endpoint fails closed with `503 ASSISTANT_NOT_CONFIGURED`.
+- `ASSISTANT_BASE_URL` — default `https://api.openai.com/v1`; any OpenAI-compatible chat-completions gateway works.
+- `ASSISTANT_MODEL` (default `gpt-4o-mini`), `ASSISTANT_TIMEOUT_SECONDS`, `ASSISTANT_MAX_OUTPUT_TOKENS`.
+
+Then set the non-secret `VITE_API_BASE_URL` at frontend build time so the static site can reach the backend, include the frontend origin in `CORS_ORIGINS`, and verify:
+
+```bash
+curl --fail "$API_ORIGIN/api/v1/assistant/status"
+curl --fail -X POST "$API_ORIGIN/api/v1/assistant/chat" \
+  -H 'Content-Type: application/json' \
+  -d '{"region":{"slug":"mumbai","name":"Mumbai","state":"Maharashtra"},"messages":[{"role":"user","content":"How hot is it?"}],"context":[{"label":"Temperature","value":"34.8 °C","evidence_type":"weather-model","source":"Open-Meteo (weather model)","observed_at":"2026-11-16T12:00:00Z","freshness":"current"}]}'
+```
+
+A ready status reports the configured model name and data policy; the chat response carries the reply, its model name, the source list with data times, and a disclaimer. Requests carry only city-level conditions and the conversation: the schema rejects profile names, emails, and coordinates outright (`extra="forbid"`), and the fixed server-side system prompt keeps replies inside the app's data, labels model estimates separately from official warnings, refuses medical diagnoses, and never claims an all-clear when data is missing or stale.
+
+On the standalone GitHub Pages deployment (`VITE_API_BASE_URL` empty) the assistant page shows an explicit "Assistant service not configured" setup notice with these steps instead of any answer. Chat history is stored in the browser's local storage on the device only; nothing syncs between devices.
+
+## 8. Evidence checklist
 
 Record the environment, UTC time, endpoint, HTTP status, source/observed/retrieved timestamps, freshness, and test run IDs. Keep these categories distinct:
 

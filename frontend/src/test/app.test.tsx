@@ -34,22 +34,25 @@ describe('the screens in the uploaded design', () => {
     expect(document.title).toBe('Dashboard · Heat Shield AI')
   })
 
-  it('keeps the assistant screen honest when no chat service is connected', async () => {
+  it('keeps the assistant screen honest when no assistant backend is configured', async () => {
     const user = userEvent.setup()
     renderApp('/assistant')
     expect(await screen.findByRole('heading', { name: 'Heat Shield AI' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Assistant service not configured' })).toBeInTheDocument()
     await user.type(screen.getByRole('textbox', { name: 'Ask Heat Shield' }), 'How can I stay cool?')
     await user.click(screen.getByRole('button', { name: 'Send message' }))
-    expect(screen.getByRole('status')).toHaveTextContent('Chat is not connected yet.')
+    // No fake reply: the message is not consumed and the setup notice stands in.
+    expect(screen.queryByRole('log')).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Assistant service not configured' })).toBeInTheDocument()
     expect(document.title).toBe('AI Assistant · Heat Shield AI')
   })
 
-  it('shows the uploaded chat-history menu and starts a new chat', async () => {
+  it('shows the real chat-history menu and starts a new chat', async () => {
     const user = userEvent.setup()
     renderApp('/menu')
     expect(await screen.findByRole('heading', { name: 'Menu' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Pinned' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Recents' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Chat history' })).toBeInTheDocument()
+    expect(screen.getByText(/No conversations yet/i)).toBeInTheDocument()
     await user.click(screen.getByRole('link', { name: 'New Chat' }))
     expect(await screen.findByRole('heading', { name: 'Heat Shield AI' })).toBeInTheDocument()
   })

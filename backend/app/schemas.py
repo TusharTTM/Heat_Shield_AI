@@ -345,6 +345,66 @@ class HotspotItem(BaseModel):
     model_version: str
 
 
+class AssistantRegionRef(BaseModel):
+    """City-level location only. `extra="forbid"` rejects profile names, emails,
+    or precise coordinates so they can never reach the assistant provider."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    slug: str = Field(min_length=1, max_length=64)
+    name: str = Field(min_length=1, max_length=120)
+    state: str = Field(min_length=1, max_length=120)
+
+
+class AssistantContextItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    label: str = Field(min_length=1, max_length=120)
+    value: str = Field(min_length=1, max_length=400)
+    evidence_type: Literal["weather-model", "air-quality-model", "official-warning", "app-state"]
+    source: str = Field(min_length=1, max_length=200)
+    observed_at: datetime | None = None
+    freshness: Literal["current", "stale", "unknown"] = "unknown"
+
+
+class AssistantMessage(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    role: Literal["user", "assistant"]
+    content: str = Field(min_length=1, max_length=4000)
+
+
+class AssistantChatRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    region: AssistantRegionRef
+    messages: list[AssistantMessage] = Field(min_length=1, max_length=40)
+    context: list[AssistantContextItem] = Field(min_length=1, max_length=30)
+
+
+class AssistantSourceItem(BaseModel):
+    label: str
+    source: str
+    evidence_type: Literal["weather-model", "air-quality-model", "official-warning", "app-state"]
+    observed_at: datetime | None = None
+    freshness: Literal["current", "stale", "unknown"] = "unknown"
+
+
+class AssistantChatResponse(BaseModel):
+    reply: str
+    model: str
+    generated_at: datetime
+    sources: list[AssistantSourceItem]
+    disclaimer: str
+
+
+class AssistantStatusResponse(BaseModel):
+    status: Literal["ready", "not_configured"]
+    provider: str
+    model: str | None
+    data_policy: str
+
+
 class ErrorResponse(BaseModel):
     detail: str
     code: str

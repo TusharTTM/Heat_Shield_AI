@@ -59,11 +59,11 @@ describe('dashboard navigation and accessibility', () => {
     // Menu is a left drawer on the assistant screen, opened by its trigger.
     await user.click(screen.getByRole('button', { name: 'Open menu' }))
     const drawer = screen.getByRole('complementary', { name: 'Menu' })
-    expect(within(drawer).getByRole('heading', { name: 'Pinned' })).toBeInTheDocument()
-    expect(within(drawer).getByRole('heading', { name: 'Recents' })).toBeInTheDocument()
+    expect(within(drawer).getByRole('heading', { name: 'Chat history' })).toBeInTheDocument()
+    expect(within(drawer).getByText(/stored in this browser only/i)).toBeInTheDocument()
     expect(drawer).toHaveAttribute('aria-hidden', 'false')
 
-    await user.click(within(drawer).getByRole('link', { name: 'New Chat' }))
+    await user.click(within(drawer).getByRole('button', { name: 'New Chat' }))
     expect(await screen.findByRole('heading', { name: 'Heat Shield AI' })).toBeInTheDocument()
     // The assistant's Dashboard affordance is now a back-arrow circle.
     await user.click(screen.getByRole('link', { name: 'Back to Dashboard' }))
