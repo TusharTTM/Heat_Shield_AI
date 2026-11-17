@@ -27,7 +27,7 @@ export interface ProfileSettings {
     types: HeatAlertTypes
     quietHours: { enabled: boolean; start: string; end: string }
   }
-  hydration: { enabled: boolean; intervalMinutes: number }
+  hydration: { enabled: boolean; intervalMinutes: number; browserNotifications: boolean }
   display: {
     unit: TemperatureUnit
     language: LanguageCode
@@ -54,7 +54,7 @@ export const defaultSettings: ProfileSettings = {
     },
     quietHours: { enabled: false, start: '22:00', end: '07:00' },
   },
-  hydration: { enabled: false, intervalMinutes: 120 },
+  hydration: { enabled: false, intervalMinutes: 120, browserNotifications: false },
   display: {
     unit: 'celsius',
     language: 'en',
@@ -125,6 +125,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     document.documentElement.dataset.contrast = settings.display.highContrast ? 'high' : 'default'
   }, [settings.display.highContrast])
+
+  useEffect(() => {
+    document.documentElement.lang = settings.display.language
+  }, [settings.display.language])
 
   const value = useMemo<SettingsContextValue>(() => {
     const unit = settings.display.unit

@@ -22,3 +22,19 @@ export const regions: Region[] = [
 export function getRegion(slug: string): Region {
   return regions.find((region) => region.slug === slug) ?? regions[0]
 }
+
+function distanceInKm(aLat: number, aLon: number, bLat: number, bLon: number): number {
+  const toRad = (deg: number) => (deg * Math.PI) / 180
+  const dLat = toRad(bLat - aLat)
+  const dLon = toRad(bLon - aLon)
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(aLat)) * Math.cos(toRad(bLat)) * Math.sin(dLon / 2) ** 2
+  return 2 * 6371 * Math.asin(Math.sqrt(h))
+}
+
+/** The listed region closest to a coordinate — used when the device location is shared. */
+export function nearestRegion(latitude: number, longitude: number): Region {
+  return regions.reduce((best, region) =>
+    distanceInKm(latitude, longitude, region.latitude, region.longitude) < distanceInKm(latitude, longitude, best.latitude, best.longitude)
+      ? region
+      : best)
+}
