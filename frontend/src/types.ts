@@ -64,11 +64,25 @@ export interface PlannerHour {
   humidity: number | null
 }
 
+/**
+ * One hourly model point for the metric detail views. Null means the data
+ * source did not provide that field for that hour — never zero-filled.
+ */
+export interface MetricHourPoint {
+  isoTime: string
+  label: string
+  temperature: number | null
+  humidity: number | null
+  uvIndex: number | null
+}
+
 export interface WeatherData extends CurrentWeather {
   forecast: ForecastDay[]
   hours: TodayHour[]
   /** Modelled hours from "now" for the heat-risk day planner. */
   next24Hours: PlannerHour[]
+  /** All modelled hours the forecast payload provides (for metric detail views). */
+  hourlySeries: MetricHourPoint[]
 }
 
 export interface WeatherResult {
@@ -95,6 +109,8 @@ export interface HistoricalDay {
 export interface HistoricalData {
   region: Region
   days: HistoricalDay[]
+  /** Modelled hourly reanalysis points for the range (temperature + humidity). */
+  hourly: MetricHourPoint[]
   observedTimeRange: { start: string; end: string }
   retrievedAt: string
   source: 'Open-Meteo Historical Weather API'
@@ -121,6 +137,8 @@ export interface AirQualityData extends Region, AirQualityValues {
   modelTime: string
   retrievedAt: string
   hourly: AirQualityHour[]
+  /** All modelled hours the air-quality payload provides (for metric detail views). */
+  hourlySeries: AirQualityHour[]
   /** Kept for compatibility with the original US-AQI card. */
   aqiStandard: 'US AQI'
   aqiStandards: ['US AQI', 'European AQI']

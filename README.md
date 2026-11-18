@@ -28,6 +28,14 @@ The dashboard includes a non-AI day planner that screens the modelled hourly for
 - The planner never requests or transmits precise location (only the selected city) or any personal health information.
 - Long limitation notes and source labels are in English, matching the site's other technical disclosures.
 
+## Metric detail views
+
+Each dashboard metric card (Temperature, Heat Index, Humidity, UV Index, Air Quality, Heat Risk) opens its own detail view in a new tab, so the dashboard stays open. Every detail view includes an interactive hourly chart with units and tooltips, an accessible hourly table, Yesterday / Today / Tomorrow controls, minimum/maximum/current summary values, a plain-language explanation with safety guidance, the data source and last-updated time, and previous/next metric navigation. Limitations:
+
+- Hourly values are **modelled estimates** (Open-Meteo weather model, ERA5 reanalysis, or CAMS air-quality model) — not official warnings or station observations.
+- Yesterday uses historical reanalysis when the connected source provides it. When it does not (for example historical UV index), the view says so plainly — **missing data is shown as unknown, never invented or presented as an all-clear**.
+- Missing hours inside a day appear as chart gaps and "Unavailable" table cells, never as zeros.
+
 ## Run the frontend
 
 Requirements: Node.js 22+ and npm. No credentials or environment file are required.

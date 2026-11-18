@@ -1,7 +1,7 @@
 import { getSimpleRisk, heatIndexC, riskFromHeatIndex } from '../data/heat'
 import type {
   AirQualityData, AirQualityHour, AirQualityResult, AirQualityValues, CurrentWeather, CurrentWeatherResult,
-  ForecastDay, HistoricalData, PlannerHour, Region, TodayHour, WeatherResult,
+  ForecastDay, HistoricalData, MetricHourPoint, PlannerHour, Region, TodayHour, WeatherResult,
 } from '../types'
 
 export const OPEN_METEO_FORECAST_URL = 'https://api.open-meteo.com/v1/forecast'
@@ -281,6 +281,40 @@ function toUtcDate(value: string): Date {
   return new Date(/Z$|[+-]\d{2}:\d{2}$/.test(value) ? value : `${value}Z`)
 }
 
+/** Every hourly point the payload provides, for the metric detail views. Null fields stay null. */
+function parseMetricHourSeries(payload: RawPayload): MetricHourPoint[] {
+  const hourly = payload.hourly
+  if (!hourly || !Array.isArray(hourly.time)) return []
+  const times = hourly.time as unknown[]
+  const temperatures = Array.isArray(hourly.temperature_2m) ? hourly.temperature_2m as unknown[] : []
+  const humidities = Array.isArray(hourly.relative_humidity_2m) ? hourly.relative_humidity_2m as unknown[] : []
+  const uvValues = Array.isArray(hourly.uv_index) ? hourly.uv_index as unknown[] : []
+  const points: MetricHourPoint[] = []
+  times.forEach((value, index) => {
+    if (typeof value !== 'string') return
+    const parsed = toUtcDate(value)
+    if (!Number.isFinite(parsed.getTime())) return
+    const numberAt = (list: unknown[]): number | null => {
+      const raw = list[index]
+      if (raw === null || raw === undefined) return null
+      const numeric = Number(raw)
+      return Number.isFinite(numeric) ? numeric : null
+    }
+    const temperature = numberAt(temperatures)
+    const humidity = numberAt(humidities)
+    const uvIndex = numberAt(uvValues)
+    if (temperature === null && humidity === null && uvIndex === null) return
+    points.push({
+      isoTime: parsed.toISOString(),
+      label: plannerHourFormatter.format(parsed).toUpperCase(),
+      temperature,
+      humidity,
+      uvIndex,
+    })
+  })
+  return points
+}
+
 /** Next 24 modelled hours from the model's current time, for the day planner. */
 function parseNext24Hours(payload: RawPayload): PlannerHour[] {
   const hourly = payload.hourly
@@ -329,6 +363,7 @@ function airQualityUrl(region: Region): URL {
   url.searchParams.set('longitude', String(region.longitude))
   url.searchParams.set('current', fields)
   url.searchParams.set('hourly', fields)
+  url.searchParams.set('past_days', '1')
   url.searchParams.set('forecast_days', '2')
   url.searchParams.set('timezone', 'Asia/Kolkata')
   return url
@@ -342,22 +377,19 @@ function parseCurrentAirQualityValues(current: Record<string, unknown>): AirQual
   return values
 }
 
-function parseAirQualityHours(payload: RawPayload, rawModelTime: string): AirQualityHour[] {
+function parseAirHourRange(payload: RawPayload, startIndex: number, count: number): AirQualityHour[] {
   const hourly = payload.hourly
   const times = hourly?.time
   if (!hourly || !Array.isArray(times)) return []
-  const exactIndex = times.indexOf(rawModelTime)
-  const currentIndex = exactIndex >= 0 ? exactIndex : times.findIndex((value) => typeof value === 'string' && value >= rawModelTime)
-  if (currentIndex < 0) return []
   const hours: AirQualityHour[] = []
-  times.slice(currentIndex, currentIndex + 24).forEach((value, offset) => {
-    const index = currentIndex + offset
+  times.slice(startIndex, startIndex + count).forEach((value, offset) => {
+    const index = startIndex + offset
     if (typeof value !== 'string') throw new WeatherApiError('Open-Meteo returned an invalid hourly air-quality timestamp.')
     const values = Object.fromEntries(AIR_QUALITY_FIELDS.map(([property, field, min, max]) => [
       property, optionalArrayNumber(hourly[field], index, min, max),
     ])) as unknown as AirQualityValues
     if (Object.values(values).every((reading) => reading === null)) return
-    const localTime = new Date(`${value}Z`)
+    const localTime = toUtcDate(value)
     if (!Number.isFinite(localTime.getTime())) throw new WeatherApiError('Open-Meteo returned an invalid hourly air-quality timestamp.')
     hours.push({
       ...values, modelTime: modelTimeToIso(value, payload.utc_offset_seconds),
@@ -367,6 +399,16 @@ function parseAirQualityHours(payload: RawPayload, rawModelTime: string): AirQua
   return hours
 }
 
+function parseAirQualityHours(payload: RawPayload, rawModelTime: string): AirQualityHour[] {
+  const hourly = payload.hourly
+  const times = hourly?.time
+  if (!hourly || !Array.isArray(times)) return []
+  const exactIndex = times.indexOf(rawModelTime)
+  const currentIndex = exactIndex >= 0 ? exactIndex : times.findIndex((value) => typeof value === 'string' && value >= rawModelTime)
+  if (currentIndex < 0) return []
+  return parseAirHourRange(payload, currentIndex, 24)
+}
+
 function parseAirQuality(region: Region, payload: RawPayload): AirQualityData {
   if (!payload.current) throw new WeatherApiError('Open-Meteo omitted current air-quality model data.')
   const current = payload.current
@@ -374,7 +416,8 @@ function parseAirQuality(region: Region, payload: RawPayload): AirQualityData {
   const values = parseCurrentAirQualityValues(current)
   const hourly = parseAirQualityHours(payload, rawModelTime)
   return {
-    ...region, ...values, hourly, modelTime: modelTimeToIso(rawModelTime, payload.utc_offset_seconds),
+    ...region, ...values, hourly, hourlySeries: parseAirHourRange(payload, 0, Number.MAX_SAFE_INTEGER),
+    modelTime: modelTimeToIso(rawModelTime, payload.utc_offset_seconds),
     retrievedAt: new Date().toISOString(), aqiStandard: 'US AQI', aqiStandards: ['US AQI', 'European AQI'],
     source: 'Open-Meteo Air Quality API (CAMS model)', evidenceType: 'air-quality-model', isStationObservation: false,
   }
@@ -394,7 +437,7 @@ export async function getWeather(region: Region, force = false): Promise<Weather
     const current = parseCurrent(region, payload)
     const forecast = parseForecast(payload)
     const hours = parseHours(payload)
-    return { ...current, forecast, hours, next24Hours: parseNext24Hours(payload) }
+    return { ...current, forecast, hours, next24Hours: parseNext24Hours(payload), hourlySeries: parseMetricHourSeries(payload) }
   })
 }
 
@@ -409,6 +452,7 @@ export async function getHistoricalWeather(region: Region, start: string, end: s
     url.searchParams.set('start_date', start)
     url.searchParams.set('end_date', end)
     url.searchParams.set('daily', 'temperature_2m_max,temperature_2m_min,temperature_2m_mean')
+    url.searchParams.set('hourly', 'temperature_2m,relative_humidity_2m')
     url.searchParams.set('timezone', 'Asia/Kolkata')
     url.searchParams.set('temperature_unit', 'celsius')
     const payload = await requestJson(url)
@@ -426,7 +470,7 @@ export async function getHistoricalWeather(region: Region, start: string, end: s
     })
     if (days.some((day) => !Number.isFinite(day.max) || !Number.isFinite(day.min) || !Number.isFinite(day.mean))) throw new WeatherApiError('Open-Meteo returned an incomplete historical day.')
     return {
-      region, days, observedTimeRange: { start, end }, retrievedAt: new Date().toISOString(),
+      region, days, hourly: parseMetricHourSeries(payload), observedTimeRange: { start, end }, retrievedAt: new Date().toISOString(),
       source: 'Open-Meteo Historical Weather API', evidenceType: 'weather-model-reanalysis',
     }
   })
