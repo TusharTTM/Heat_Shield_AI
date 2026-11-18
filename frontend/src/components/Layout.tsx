@@ -14,13 +14,13 @@ export function Layout() {
   useDeviceLocationSync()
 
   useEffect(() => {
-    document.title = getDocumentTitle(location.pathname, settings.display.language)
+    document.title = getDocumentTitle(location.pathname, settings.display.language, location.search)
     window.scrollTo(0, 0)
     if (previousPath.current !== location.pathname) {
       mainContent.current?.focus({ preventScroll: true })
       previousPath.current = location.pathname
     }
-  }, [location.pathname, settings.display.language])
+  }, [location.pathname, location.search, settings.display.language])
 
   return <div className="site-shell dashboard-shell uploaded-site-shell">
     <a className="skip-link" href="#main-content">Skip to main content</a>
