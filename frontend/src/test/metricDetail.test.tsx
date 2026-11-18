@@ -1,4 +1,4 @@
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -148,6 +148,16 @@ describe('metric detail views', () => {
   it('redirects unknown metrics back to the dashboard', async () => {
     renderApp('/metric/not-a-metric')
     expect(await screen.findByRole('heading', { name: 'Heat Shield dashboard for Mumbai' })).toBeDefined()
+  })
+
+  it('titles the browser tab for the metric and day, updating when the day changes', async () => {
+    const user = userEvent.setup()
+    renderApp('/metric/temperature?day=today')
+    await screen.findByRole('heading', { name: 'Temperature · Today' })
+    await waitFor(() => expect(document.title).toBe('Temperature · Today · Heat Shield AI'))
+    await user.click(screen.getByRole('link', { name: /Yesterday/ }))
+    await screen.findByRole('heading', { name: 'Temperature · Yesterday' })
+    await waitFor(() => expect(document.title).toBe('Temperature · Yesterday · Heat Shield AI'))
   })
 })
 

@@ -12,6 +12,7 @@
 import type {
   AirQualityData, AirQualityHour, HistoricalData, MetricHourPoint, SimpleRiskLevel, WeatherData,
 } from '../types'
+import type { MessageKey } from '../i18n'
 import { riskFromEuropeanAqi, riskFromUsAqi, usAqiCategory } from './hazards'
 import { getSimpleRisk, heatIndexC, riskFromHeatIndex } from './heat'
 
@@ -21,6 +22,31 @@ export type DayId = 'yesterday' | 'today' | 'tomorrow'
 export const METRIC_ORDER: MetricId[] = ['temperature', 'heat-index', 'humidity', 'uv-index', 'air-quality', 'heat-risk']
 
 export const DAY_ORDER: DayId[] = ['yesterday', 'today', 'tomorrow']
+
+/** i18n title keys per metric — shared by the detail page headings and document titles. */
+export const METRIC_TITLE_KEYS: Record<MetricId, MessageKey> = {
+  temperature: 'metric.temperature',
+  'heat-index': 'metric.heatIndex',
+  humidity: 'metric.humidity',
+  'uv-index': 'metric.uvIndex',
+  'air-quality': 'metric.airQuality',
+  'heat-risk': 'metric.heatRisk',
+}
+
+/** i18n day labels — shared by the date tabs and document titles. */
+export const DAY_TITLE_KEYS: Record<DayId, MessageKey> = {
+  yesterday: 'detail.yesterday',
+  today: 'detail.today',
+  tomorrow: 'detail.tomorrow',
+}
+
+export function isMetricId(value: string | undefined): value is MetricId {
+  return typeof value === 'string' && (METRIC_ORDER as string[]).includes(value)
+}
+
+export function isDayId(value: string | null | undefined): value is DayId {
+  return value !== null && value !== undefined && (DAY_ORDER as string[]).includes(value)
+}
 
 export interface MetricDefinition {
   id: MetricId

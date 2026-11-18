@@ -8,35 +8,13 @@ import { useApp } from '../context/AppContext'
 import { useSettings } from '../context/SettingsContext'
 import { useWeather } from '../context/WeatherContext'
 import {
-  DAY_ORDER, METRIC_DEFINITIONS, METRIC_ORDER, buildMetricDay, neighborMetrics, resolveDayDates,
-  type DayId, type MetricId,
+  DAY_ORDER, DAY_TITLE_KEYS as DAY_KEY, METRIC_DEFINITIONS, METRIC_TITLE_KEYS as METRIC_TITLE_KEY,
+  buildMetricDay, isDayId, isMetricId, neighborMetrics, resolveDayDates,
+  type DayId,
 } from '../data/metricDetails'
 import { getRegion } from '../data/regions'
 import type { HistoricalData } from '../types'
-import { useT, type MessageKey } from '../i18n'
-
-const METRIC_TITLE_KEY: Record<MetricId, MessageKey> = {
-  temperature: 'metric.temperature',
-  'heat-index': 'metric.heatIndex',
-  humidity: 'metric.humidity',
-  'uv-index': 'metric.uvIndex',
-  'air-quality': 'metric.airQuality',
-  'heat-risk': 'metric.heatRisk',
-}
-
-const DAY_KEY: Record<DayId, MessageKey> = {
-  yesterday: 'detail.yesterday',
-  today: 'detail.today',
-  tomorrow: 'detail.tomorrow',
-}
-
-function isMetricId(value: string | undefined): value is MetricId {
-  return typeof value === 'string' && (METRIC_ORDER as string[]).includes(value)
-}
-
-function isDayId(value: string | null): value is DayId {
-  return value !== null && (DAY_ORDER as string[]).includes(value)
-}
+import { useT } from '../i18n'
 
 interface HistoryState {
   status: 'idle' | 'loading' | 'ready' | 'error'
