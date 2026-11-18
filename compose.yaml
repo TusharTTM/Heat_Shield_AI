@@ -37,6 +37,11 @@ services:
       SACHET_MAX_CAP_DOCUMENTS: ${SACHET_MAX_CAP_DOCUMENTS:-50}
       ML_MODEL_PATH: /app/ml/saved_models/temperature_model.joblib
       ML_METADATA_PATH: /app/ml/saved_models/temperature_model.metadata.json
+      ASSISTANT_API_KEY: ${ASSISTANT_API_KEY:-}
+      ASSISTANT_BASE_URL: ${ASSISTANT_BASE_URL:-https://api.openai.com/v1}
+      ASSISTANT_MODEL: ${ASSISTANT_MODEL:-gpt-4o-mini}
+      ASSISTANT_TIMEOUT_SECONDS: ${ASSISTANT_TIMEOUT_SECONDS:-30}
+      ASSISTANT_MAX_OUTPUT_TOKENS: ${ASSISTANT_MAX_OUTPUT_TOKENS:-700}
     ports:
       - "8000:8000"
     volumes:

@@ -16,6 +16,7 @@ import {
 import type { LucideIcon } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { CityPicker } from '../components/CityPicker'
+import { DayPlanner } from '../components/DayPlanner'
 import { EarlyWarningsPanel } from '../components/EarlyWarningsPanel'
 import { RiskBadge } from '../components/ui'
 import { useApp } from '../context/AppContext'
@@ -124,16 +125,17 @@ export default function Dashboard() {
     </section>
 
     <EarlyWarningsPanel />
+    <DayPlanner />
 
     <div className="dashboard-section-heading">
       <div><span className="dashboard-kicker">{t('dash.atAGlance')}</span><h2>{t('dash.conditions')}</h2></div>
       <span>{t('dash.weatherAir')}</span>
     </div>
     <section className="uploaded-metrics-grid key-readings-grid" aria-label="Dashboard readings and shortcuts">
-      <MetricCard icon={Thermometer} title={t('metric.temperature')} value={weather ? formatTemp(weather.temperature) : '—'} unit={weather ? tempSymbol : undefined} detail={t('metric.modelAirTemp')} />
-      <MetricCard icon={Flame} title={t('metric.heatIndex')} value={weather ? formatTemp(weather.heatIndex) : '—'} unit={weather ? tempSymbol : undefined} detail={weather ? t('metric.feelsLike', { value: `${formatTemp(weather.apparentTemperature)}${tempSymbol}` }) : t('metric.notAssessed')} risk={heat?.level} />
-      <MetricCard icon={Droplets} title={t('metric.humidity')} value={weather ? String(weather.humidity) : '—'} unit={weather ? '%' : undefined} detail={t('metric.relativeHumidity')} />
-      <MetricCard icon={Sun} title={t('metric.uvIndex')} value={today?.uvIndexMax == null ? '—' : today.uvIndexMax.toFixed(1)} unit={today?.uvIndexMax == null ? undefined : 'max'} detail={t('metric.dailyMax')} />
+      <MetricCard icon={Thermometer} title={t('metric.temperature')} value={weather ? formatTemp(weather.temperature) : '—'} unit={weather ? tempSymbol : undefined} detail={t('metric.modelAirTemp')} to="/metric/temperature" newTab />
+      <MetricCard icon={Flame} title={t('metric.heatIndex')} value={weather ? formatTemp(weather.heatIndex) : '—'} unit={weather ? tempSymbol : undefined} detail={weather ? t('metric.feelsLike', { value: `${formatTemp(weather.apparentTemperature)}${tempSymbol}` }) : t('metric.notAssessed')} risk={heat?.level} to="/metric/heat-index" newTab />
+      <MetricCard icon={Droplets} title={t('metric.humidity')} value={weather ? String(weather.humidity) : '—'} unit={weather ? '%' : undefined} detail={t('metric.relativeHumidity')} to="/metric/humidity" newTab />
+      <MetricCard icon={Sun} title={t('metric.uvIndex')} value={today?.uvIndexMax == null ? '—' : today.uvIndexMax.toFixed(1)} unit={today?.uvIndexMax == null ? undefined : 'max'} detail={t('metric.dailyMax')} to="/metric/uv-index" newTab />
       <MetricCard
         icon={CloudSun}
         title={t('metric.airQuality')}
@@ -141,8 +143,10 @@ export default function Dashboard() {
         unit={primaryAqi?.label}
         detail={primaryAqi ? `${primaryAqi.category} · CAMS model` : airAssessment ? 'Modelled AQI unavailable' : t('metric.notAssessed')}
         risk={airAssessment?.level}
+        to="/metric/air-quality"
+        newTab
       />
-      <ActionCard icon={ShieldCheck} title={t('metric.heatRisk')} value={heat?.level ?? 'Unassessed'} detail={t('metric.heatScreening')} />
+      <ActionCard icon={ShieldCheck} title={t('metric.heatRisk')} value={heat?.level ?? 'Unassessed'} detail={t('metric.heatScreening')} to="/metric/heat-risk" newTab />
       <ActionCard icon={FileText} title={t('metric.reports')} value={officialAlerts.status === 'ready' ? String(officialAlerts.data?.count ?? 0) : '—'} detail={t('metric.officialWarnings')} />
       <ActionCard icon={MessageCircle} title={t('metric.assistant')} value={t('metric.open')} detail={t('metric.ask')} to="/assistant" />
     </section>
@@ -197,6 +201,8 @@ function MetricCard({
   unit,
   detail,
   risk,
+  to,
+  newTab = false,
 }: {
   icon: LucideIcon
   title: string
@@ -204,12 +210,29 @@ function MetricCard({
   unit?: string
   detail: string
   risk?: 'low' | 'moderate' | 'high' | 'extreme'
+  /** Detail view for this metric; opens in a new tab so the dashboard stays open. */
+  to?: string
+  newTab?: boolean
 }) {
-  return <article className={`uploaded-tile weather-card${risk ? ` risk-${risk}` : ''}`}>
+  const content = <>
     <h2 className="uploaded-tile-heading"><Icon size={17} aria-hidden="true" /><span>{title}</span></h2>
     <strong className={`uploaded-tile-value${value === '—' ? ' uploaded-tile-value--empty' : ''}`}>{value}{unit && <small>{unit}</small>}</strong>
     <span className="uploaded-tile-detail">{detail}</span>
-  </article>
+  </>
+
+  if (to) {
+    // The link wraps the same <article> card the dashboard always rendered, so
+    // the layout and styling stay identical while the whole card becomes openable.
+    return <Link
+      to={to}
+      target={newTab ? '_blank' : undefined}
+      className="metric-card-link"
+      aria-label={`${title} — ${newTab ? 'open detail view in a new tab' : 'open detail view'}`}
+    >
+      <article className={`uploaded-tile weather-card${risk ? ` risk-${risk}` : ''}`}>{content}</article>
+    </Link>
+  }
+  return <article className={`uploaded-tile weather-card${risk ? ` risk-${risk}` : ''}`}>{content}</article>
 }
 
 function ActionCard({
@@ -218,12 +241,14 @@ function ActionCard({
   value,
   detail,
   to,
+  newTab = false,
 }: {
   icon: LucideIcon
   title: string
   value: string
   detail: string
   to?: string
+  newTab?: boolean
 }) {
   const content = <>
     <h2 className="uploaded-tile-heading"><Icon size={17} aria-hidden="true" /><span>{title}</span></h2>
@@ -232,6 +257,11 @@ function ActionCard({
   </>
 
   return to
-    ? <Link to={to} className="uploaded-tile uploaded-action-tile">{content}</Link>
+    ? <Link
+      to={to}
+      target={newTab ? '_blank' : undefined}
+      className="uploaded-tile uploaded-action-tile"
+      aria-label={newTab ? `${title} — open detail view in a new tab` : undefined}
+    >{content}</Link>
     : <article className="uploaded-tile uploaded-action-tile">{content}</article>
 }

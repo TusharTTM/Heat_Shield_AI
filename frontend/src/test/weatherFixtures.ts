@@ -21,6 +21,27 @@ export function weatherFixture(slug = 'mumbai'): WeatherData {
       time: `${hour > 12 ? hour - 12 : hour} ${hour < 12 ? 'AM' : 'PM'}`,
       temperature: sample.temperature + [-4.7, -2.1, -0.5, 0.3, -0.8, -2][index],
     })),
+    next24Hours: Array.from({ length: 24 }, (_, index) => {
+      const isoTime = new Date(Date.UTC(2026, 10, 8, 9 + index)).toISOString()
+      const phase = ((index + 6) / 24) * 2 * Math.PI
+      return {
+        isoTime,
+        label: new Intl.DateTimeFormat('en-IN', { hour: 'numeric', timeZone: 'UTC' }).format(new Date(Date.UTC(2026, 10, 8, 9 + index))).toUpperCase(),
+        temperature: Math.round((sample.temperature + 3.5 * Math.sin(phase - Math.PI / 2)) * 10) / 10,
+        humidity: Math.round(Math.max(30, Math.min(95, 65 - 20 * Math.sin(phase - Math.PI / 2)))),
+      }
+    }),
+    hourlySeries: Array.from({ length: 48 }, (_, index) => {
+      const date = new Date(Date.UTC(2026, 10, 8, index))
+      const phase = (index / 24) * 2 * Math.PI
+      return {
+        isoTime: date.toISOString(),
+        label: new Intl.DateTimeFormat('en-IN', { hour: 'numeric', timeZone: 'UTC' }).format(date).toUpperCase(),
+        temperature: Math.round((sample.temperature + 3.5 * Math.sin(phase - Math.PI / 2)) * 10) / 10,
+        humidity: Math.round(Math.max(30, Math.min(95, 65 - 20 * Math.sin(phase - Math.PI / 2)))),
+        uvIndex: Math.round(Math.max(0, 8 * Math.sin(phase - Math.PI / 2)) * 10) / 10,
+      }
+    }),
   }
 }
 
@@ -29,9 +50,11 @@ export function weatherResult(slug = 'mumbai'): WeatherResult {
 }
 
 export function currentResult(slug = 'mumbai'): CurrentWeatherResult {
-  const { forecast, hours, ...current } = weatherFixture(slug)
+  const { forecast, hours, next24Hours, hourlySeries, ...current } = weatherFixture(slug)
   void forecast
   void hours
+  void next24Hours
+  void hourlySeries
   return { data: current, freshness: 'current', fromCache: false }
 }
 
@@ -44,8 +67,16 @@ export function airQualityFixture(slug = 'mumbai'): AirQualityData {
     pm10: 88.4 + index, pm2_5: 45.2 + index, carbonMonoxide: 420.5 + index,
     nitrogenDioxide: 31.1 + index, sulphurDioxide: 8.2 + index, ozone: 64.3 + index,
   }))
+  /** Three model days (yesterday, today, tomorrow) for the metric detail views. */
+  const hourlySeries = Array.from({ length: 72 }, (_, index) => ({
+    modelTime: new Date(Date.UTC(2026, 10, 7, 9 + index)).toISOString(),
+    label: new Intl.DateTimeFormat('en-IN', { weekday: 'short', hour: 'numeric', timeZone: 'UTC' }).format(new Date(Date.UTC(2026, 10, 7, 9 + index))),
+    usAqi: 110 + (index % 30), europeanAqi: 45 + (index % 20),
+    pm10: 80 + (index % 15), pm2_5: 40 + (index % 12), carbonMonoxide: 415 + (index % 10),
+    nitrogenDioxide: 28 + (index % 8), sulphurDioxide: 7 + (index % 5), ozone: 60 + (index % 12),
+  }))
   return {
-    ...region, ...hourly[0], hourly, modelTime: hourly[0].modelTime, retrievedAt: '2026-11-08T09:05:00.000Z',
+    ...region, ...hourly[0], hourly, hourlySeries, modelTime: hourly[0].modelTime, retrievedAt: '2026-11-08T09:05:00.000Z',
     aqiStandard: 'US AQI', aqiStandards: ['US AQI', 'European AQI'],
     source: 'Open-Meteo Air Quality API (CAMS model)', evidenceType: 'air-quality-model', isStationObservation: false,
   }

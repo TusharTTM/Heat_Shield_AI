@@ -31,6 +31,11 @@ class Settings(BaseSettings):
     sensor_stale_seconds: int = 900
     ml_model_path: Path = Path("ml/saved_models/temperature_model.joblib")
     ml_metadata_path: Path = Path("ml/saved_models/temperature_model.metadata.json")
+    assistant_api_key: str = ""
+    assistant_base_url: str = "https://api.openai.com/v1"
+    assistant_model: str = "gpt-4o-mini"
+    assistant_timeout_seconds: float = 30
+    assistant_max_output_tokens: int = 700
 
     @property
     def cors_origin_list(self) -> list[str]:

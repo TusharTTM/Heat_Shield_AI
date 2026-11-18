@@ -14,6 +14,9 @@ from sqlalchemy.orm import Session
 
 from .air_quality import AirQualityClient
 from .air_quality_service import air_quality_history, current_air_quality, forecast_air_quality
+from .assistant import (
+    DATA_POLICY, DISCLAIMER, PROVIDER_NAME, AssistantClient, AssistantProviderError,
+)
 from .config import Settings, get_settings
 from .cpcb import CPCBClient
 from .cpcb_service import current_official_air_quality, official_air_quality_history
@@ -26,6 +29,7 @@ from .sachet import SachetClient
 from .sachet_service import current_official_alerts
 from .schemas import (
     AirQualityForecastResponse, AirQualityHistoryResponse, AirQualityResponse, AirQualityRiskResponse,
+    AssistantChatRequest, AssistantChatResponse, AssistantSourceItem, AssistantStatusResponse,
     CurrentWeatherResponse, ForecastResponse, HealthResponse, HistoryResponse, HotspotItem,
     OfficialAirQualityHistoryResponse, OfficialAirQualityResponse, OfficialAlertsResponse,
     PredictionRequest, PredictionResponse, RegionResponse, RiskResponse, SafetyResponse,
@@ -41,7 +45,7 @@ logger = logging.getLogger(__name__)
 def create_app(
     settings: Settings | None = None, weather_client: WeatherClient | None = None,
     air_quality_client: AirQualityClient | None = None, cpcb_client: CPCBClient | None = None,
-    sachet_client: SachetClient | None = None,
+    sachet_client: SachetClient | None = None, assistant_client: AssistantClient | None = None,
 ) -> FastAPI:
     settings = settings or get_settings()
     logging.basicConfig(level=getattr(logging, settings.log_level.upper(), logging.INFO))
@@ -65,6 +69,10 @@ def create_app(
     app.state.cpcb_client = cpcb_client or CPCBClient(settings.cpcb_base_url, settings.data_gov_in_api_key, settings.cpcb_timeout_seconds)
     app.state.sachet_client = sachet_client or SachetClient(settings.sachet_feed_url, settings.sachet_timeout_seconds)
     app.state.model_service = ModelService(settings)
+    app.state.assistant_client = assistant_client or AssistantClient(
+        settings.assistant_base_url, settings.assistant_api_key, settings.assistant_model,
+        settings.assistant_timeout_seconds, settings.assistant_max_output_tokens,
+    )
     app.add_middleware(
         CORSMiddleware, allow_origins=settings.cors_origin_list, allow_credentials=False,
         allow_methods=["GET", "POST"], allow_headers=["Content-Type", "X-Sensor-Key"],
@@ -276,6 +284,48 @@ def create_app(
         predictions = [predict(item) for item in requests]
         ranked = sorted(predictions, key=lambda item: item["predicted_temperature_c"], reverse=True)[:5]
         return [{"region": item["region"], "predicted_temperature_c": item["predicted_temperature_c"], "evidence_type": "model_inferred", "model_version": item["model_version"]} for item in ranked]
+
+    @app.get("/api/v1/assistant/status", response_model=AssistantStatusResponse, tags=["assistant"])
+    def assistant_status():
+        configured = bool(settings.assistant_api_key)
+        return {
+            "status": "ready" if configured else "not_configured",
+            "provider": PROVIDER_NAME,
+            "model": app.state.assistant_client.model if configured else None,
+            "data_policy": DATA_POLICY,
+        }
+
+    @app.post("/api/v1/assistant/chat", response_model=AssistantChatResponse, tags=["assistant"])
+    def assistant_chat(request: AssistantChatRequest):
+        if not settings.assistant_api_key:
+            raise HTTPException(status_code=503, detail={
+                "code": "ASSISTANT_NOT_CONFIGURED",
+                "detail": "The AI assistant provider is not configured on this server.",
+            })
+        payload = request.model_dump(mode="json")
+        try:
+            reply = app.state.assistant_client.chat(payload)
+        except AssistantProviderError:
+            logger.exception("Assistant provider error")
+            raise HTTPException(status_code=502, detail={
+                "code": "ASSISTANT_UPSTREAM_ERROR",
+                "detail": "The assistant provider could not complete the request.",
+            })
+        seen: set[tuple[str, str]] = set()
+        sources: list[AssistantSourceItem] = []
+        for item in request.context:
+            key = (item.label, item.source)
+            if key in seen:
+                continue
+            seen.add(key)
+            sources.append(AssistantSourceItem(
+                label=item.label, source=item.source, evidence_type=item.evidence_type,
+                observed_at=item.observed_at, freshness=item.freshness,
+            ))
+        return AssistantChatResponse(
+            reply=reply, model=app.state.assistant_client.model, generated_at=utc_now(),
+            sources=sources, disclaimer=DISCLAIMER,
+        )
 
     @app.get("/api/v1/health", response_model=HealthResponse, tags=["status"])
     @app.get("/api/v1/status", response_model=HealthResponse, include_in_schema=False)

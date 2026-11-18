@@ -66,12 +66,41 @@ describe('Open-Meteo client', () => {
     expect(result.data.observedAt).toBe('2026-11-08T09:00:00.000Z')
     expect(result.data.forecast).toHaveLength(5)
     expect(result.data.hours).toHaveLength(6)
+    expect(result.data.next24Hours).toHaveLength(3)
+    expect(result.data.next24Hours[0]).toEqual({
+      isoTime: '2026-11-08T14:00:00.000Z',
+      label: '2 PM',
+      temperature: 35.1,
+      humidity: null,
+    })
     expect(result.data.evidenceType).toBe('weather-model')
     const url = new URL(String(fetchMock.mock.calls[0][0]))
     expect(url.searchParams.get('latitude')).toBe('19.076')
     expect(url.searchParams.get('current')).toContain('apparent_temperature')
     expect(url.searchParams.get('forecast_days')).toBe('5')
     expect(url.searchParams.get('timezone')).toBe('Asia/Kolkata')
+  })
+
+  it('parses 24 planner hours from the model current time, with humidity and mixed timestamp formats', async () => {
+    const base = payload()
+    const times = Array.from({ length: 30 }, (_, index) => {
+      const stamp = new Date(Date.UTC(2026, 10, 8, 10 + index)).toISOString().slice(0, 16)
+      return index % 2 === 0 ? `${stamp}Z` : stamp
+    })
+    const hourly = {
+      time: times,
+      temperature_2m: times.map((_, index) => 30 + index),
+      relative_humidity_2m: times.map((_, index) => (index % 5 === 0 ? null : 50 + index)),
+    }
+    fetchMock.mockResolvedValue(jsonResponse({ ...base, hourly }))
+    const result = await getWeather(getRegion('mumbai'))
+    expect(result.data.next24Hours).toHaveLength(24)
+    expect(result.data.next24Hours[0].isoTime).toBe('2026-11-08T14:00:00.000Z')
+    expect(result.data.next24Hours[23].isoTime).toBe('2026-11-09T13:00:00.000Z')
+    expect(result.data.next24Hours[0].temperature).toBe(34)
+    expect(result.data.next24Hours[0].humidity).toBe(54)
+    expect(result.data.next24Hours[1].humidity).toBeNull()
+    expect(result.data.next24Hours[2].humidity).toBe(56)
   })
 
   it('uses fresh cache, supports explicit refresh, and deduplicates in-flight requests', async () => {
