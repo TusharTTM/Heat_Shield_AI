@@ -96,7 +96,8 @@ describe('DayPlanner timeline', () => {
     renderPlanner()
     const note = await screen.findByText(/Modelled forecast \(Open-Meteo weather model\)/)
     expect(note.textContent).toContain('updated')
-    expect(screen.getByText(/not official warnings, not station observations/)).toBeDefined()
+    // One combined caveat now carries all three claims instead of two variants.
+    expect(screen.getByText(/not official warnings, station readings, or medical advice/)).toBeDefined()
   })
 
   it('warns that unscreened hours are unknown when humidity is missing', async () => {

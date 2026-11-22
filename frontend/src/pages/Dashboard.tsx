@@ -112,7 +112,11 @@ export default function Dashboard() {
           <span className="uploaded-eyebrow"><BellRing size={15} aria-hidden="true" />{t('dash.situation')} · <span className="uploaded-alert-place">{selected.name}, {selected.state}</span></span>
           <h2 id="overall-screening-title">{latestOfficialAlert ? t('dash.officialActive') : primaryRisk.bannerLabel}</h2>
         </div>
-        {primaryRisk.level && <RiskBadge level={primaryRisk.level} />}
+        {/* No RiskBadge here. The h2 already renders the same word ("High"),
+            because bannerLabel is SCREENING_LABELS[level] — the badge printed it
+            a second time right beside it. The level's colour still comes from
+            this section's `risk-*` class, so nothing is lost by dropping it. */}
+        {primaryRisk.level && latestOfficialAlert && <RiskBadge level={primaryRisk.level} />}
       </div>
       <p className="uploaded-alert-summary">
         {latestOfficialAlert
@@ -132,7 +136,7 @@ export default function Dashboard() {
     <DayPlanner />
 
     <div className="dashboard-section-heading">
-      <div><span className="dashboard-kicker">{t('dash.atAGlance')}</span><h2>{t('dash.conditions')}</h2></div>
+      <div><h2>{t('dash.conditions')}</h2></div>
       <span>{t('dash.weatherAir')}</span>
     </div>
     <section className="uploaded-metrics-grid key-readings-grid" aria-label="Dashboard readings and shortcuts">
@@ -198,7 +202,6 @@ export default function Dashboard() {
           <p>{progress.completedCount === progress.totalCount && progress.totalCount > 0 ? t('dash.dailyPlanComplete') : t('dash.precautionsCompleted')}</p>
         </div>
         <progress value={progress.percent} max={100} aria-label={`Heat mission progress: ${progress.percent}%`} />
-        <div className="mission-progress-footer"><span>{t('dash.percentComplete', { percent: progress.percent })}</span></div>
       </section>
     </div>
   </div>

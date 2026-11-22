@@ -16,7 +16,7 @@ import {
 import { Link, useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import { defaultSettings, useSettings, type ProfileSettings } from '../context/SettingsContext'
-import { getRegion, nearestRegion, regions } from '../data/regions'
+import { nearestRegion, regions } from '../data/regions'
 import { languageOptions, useT, type Translate } from '../i18n'
 
 const HYDRATION_INTERVALS = [30, 60, 120, 180, 240] as const
@@ -136,7 +136,6 @@ export default function Profile() {
     }
   }, [])
 
-  const selectedRegion = getRegion(region)
 
   const displayName = settings.name.trim() || 'Your profile'
   const initials = initialsOf(settings.name)
@@ -334,7 +333,7 @@ export default function Profile() {
     </section>
 
     <SettingsSection icon={MapPin} slug="location" title={t('profile.location')} description={t('profile.locationDesc')}>
-      <SettingRow title={t('profile.defaultCity')} description={t('profile.defaultCityDesc', { city: `${selectedRegion.name}, ${selectedRegion.state}` })}>
+      <SettingRow title={t('profile.defaultCity')}>
         <select
           className="settings-select"
           aria-label={t('profile.defaultCity')}

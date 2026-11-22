@@ -157,7 +157,9 @@ export function buildDayPlan(
   if (unscreenedCount > 0) {
     summaryParts.push(`${unscreenedCount} of ${views.length} hours have no humidity reading and are left unscreened — treat them as unknown.`)
   }
-  summaryParts.push('All values are model estimates, not official warnings.')
+  // The panel footer already states "not official warnings" with the rest of
+  // the caveat, so the summary keeps only its own claim.
+  summaryParts.push('All values are model estimates.')
 
   return {
     hours: views,

@@ -58,7 +58,7 @@ describe('buildDayPlan', () => {
       expect(hour.heatIndex as number).toBeLessThan(plan.peakHeatIndex as number)
     }
     expect(plan.summary).toContain('Lower is not safe')
-    expect(plan.summary).toContain('model estimates, not official warnings')
+    expect(plan.summary).toContain('All values are model estimates.')
   })
 
   it('reports no cooler window when heat stays flat', () => {

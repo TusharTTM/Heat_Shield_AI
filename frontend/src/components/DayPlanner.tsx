@@ -111,7 +111,9 @@ export function DayPlanner() {
             </li>)}
           </ul>
           : <p className="day-planner-note">{t('plan.lowerNone')}</p>}
-        <p className="day-planner-caveat">Comparative only — a lower-heat window is not a safe period. Heat stress is still possible, and this modelled screening is not an official warning or medical advice.</p>
+        {plan.lowerWindows.length > 0 && (
+          <p className="day-planner-caveat">Comparative only — a lower-heat window is not a safe period.</p>
+        )}
       </div>
 
       <div className="day-planner-compare">
@@ -147,7 +149,7 @@ export function DayPlanner() {
     {weather && (
       <p className="early-warnings-note">
         {t('plan.sourceNote', { time: updatedAt })}{' · '}
-        <span className="day-planner-caveat">Modelled forecast values — not official warnings, not station observations.</span>
+        <span className="day-planner-caveat">Modelled values, not official warnings, station readings, or medical advice.</span>
       </p>
     )}
   </section>

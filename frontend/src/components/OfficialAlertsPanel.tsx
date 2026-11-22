@@ -29,7 +29,7 @@ export function OfficialAlertsPanel({ state }: { state: OfficialSourceState<Offi
       <details className="official-why-drawer">
         <summary>Why official warnings are unavailable here, and what would fix it</summary>
         <div className="plain-language-callout"><strong>For visitors:</strong> Live government disaster alerts require a backend server and cannot run directly inside this static website.</div>
-        <p className="operator-detail-note"><span className="operator-detail-tag">Technical &amp; self-hosting detail:</span> GitHub Pages cannot run the Python CAP client. Configure <code>VITE_API_BASE_URL</code> to a deployed FastAPI backend to retrieve SACHET alerts. This does <strong>not</strong> mean there are no warnings.</p>
+        <p className="operator-detail-note"><span className="operator-detail-tag">Technical &amp; self-hosting detail:</span> GitHub Pages cannot run the Python CAP client. Configure <code>VITE_API_BASE_URL</code> to a deployed FastAPI backend to retrieve SACHET alerts.</p>
       </details>
     </div>}
     {state.status === 'loading' && <p className="official-loading" role="status"><BellRing size={19} aria-hidden="true" />Retrieving and validating official CAP messages…</p>}

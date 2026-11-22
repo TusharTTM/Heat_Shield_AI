@@ -102,13 +102,13 @@ describe('design system', () => {
       .map((m) => m[1])
       .filter((name) => name !== 'none') // the reduced-motion override is not an animation
     // Loading affordances plus the two entrances this theme adds: the city panel
-    // and the drawer backdrop. Nothing else is orchestrated.
-    expect([...new Set(animated)].sort()).toEqual(['fade-in', 'loading-sweep', 'picker-in', 'spin'])
+    // and the drawer backdrop. Nothing else is orchestrated. `spin` belonged to
+    // the deleted WeatherLoading spinner, so it is gone with its only user.
+    expect([...new Set(animated)].sort()).toEqual(['fade-in', 'loading-sweep', 'picker-in'])
     // Every entrance and every loading indicator is switched off under reduced motion.
     const reducedMotionBlocks = [...sheet.matchAll(/@media \(prefers-reduced-motion: reduce\)\s*\{([\s\S]*?)\n\}/g)]
       .map((m) => m[1])
       .join('\n')
-    expect(reducedMotionBlocks).toMatch(/\.weather-spinner\s*\{[^}]*animation:\s*none/)
     expect(reducedMotionBlocks).toMatch(/\.action-checklist-loading-line\s*\{[^}]*animation:\s*none/)
     expect(reducedMotionBlocks).toMatch(/\.city-picker-popover\s*\{[^}]*animation:\s*none/)
 

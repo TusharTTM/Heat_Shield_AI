@@ -38,7 +38,7 @@ export function ChatHistoryMenu({
       <h2 id={`${variant}-history-title`} className="chat-history-heading">{t('menu.historyTitle')}</h2>
 
       {conversations.length === 0 && (
-        <p className="chat-history-empty" role="status">{t('menu.empty')} {t('menu.noMessages')}.</p>
+        <p className="chat-history-empty" role="status">{t('menu.empty')}</p>
       )}
 
       <ul className="chat-history-list">

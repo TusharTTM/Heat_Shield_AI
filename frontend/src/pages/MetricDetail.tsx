@@ -133,7 +133,7 @@ export default function MetricDetail() {
         <summary>{t('detail.hourlyTable')}</summary>
         <div className="table-scroll">
           <table>
-            <caption>{view.source} · modelled estimates — not official warnings or station observations</caption>
+            <caption>{view.source} · modelled estimates</caption>
             <thead>
               <tr>
                 <th scope="col">{t('detail.hour')}</th>
