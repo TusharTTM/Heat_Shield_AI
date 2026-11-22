@@ -137,7 +137,7 @@ export default function Dashboard() {
       <div><h2>{t('dash.conditions')}</h2></div>
       <span>{t('dash.weatherAir')}</span>
     </div>
-    <section className="uploaded-metrics-grid key-readings-grid" aria-label="Dashboard readings and shortcuts">
+    <section className="key-readings-grid" aria-label="Dashboard readings and shortcuts">
       <MetricCard icon={Thermometer} title={t('metric.temperature')} value={weather ? formatTemp(weather.temperature) : '—'} unit={weather ? tempSymbol : undefined} detail={t('metric.modelAirTemp')} to="/metric/temperature" newTab />
       <MetricCard icon={Flame} title={t('metric.heatIndex')} value={weather ? formatTemp(weather.heatIndex) : '—'} unit={weather ? tempSymbol : undefined} detail={weather ? t('metric.feelsLike', { value: `${formatTemp(weather.apparentTemperature)}${tempSymbol}` }) : t('metric.notAssessed')} risk={heat?.level} to="/metric/heat-index" newTab />
       <MetricCard icon={Droplets} title={t('metric.humidity')} value={weather ? String(weather.humidity) : '—'} unit={weather ? '%' : undefined} detail={t('metric.relativeHumidity')} to="/metric/humidity" newTab />

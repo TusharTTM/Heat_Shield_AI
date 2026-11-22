@@ -24,7 +24,12 @@
   z-index: var(--z-base);
   display: flex;
   flex-direction: column;
+  /* Declared in ascending order so a browser that understands none of the
+   * newer units falls back cleanly. `svh` is the viewport with mobile browser
+   * chrome showing — sizing to it means the page never gets taller than the
+   * space actually visible, so nothing is trapped under a collapsing toolbar. */
   min-height: 100vh;
+  min-height: 100svh;
 }
 
 .skip-link {
@@ -373,14 +378,31 @@ td {
 /* Official vs model: two ruled columns, not two tinted chips. */
 /* --- Key readings --------------------------------------------------------- */
 
-.key-readings-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+/* Fluid columns, no breakpoints. Two terms decide the count:
+ *   9.5rem                   the narrowest a tile may get (readable on a phone)
+ *   (100% - 3 gaps) / 4      the width that would fit exactly four columns
+ * The larger of the two is the track minimum, so the grid yields 1, 2, 3 or 4
+ * columns from the space it actually has and can never exceed 4. Eight tiles
+ * therefore fill 2x4 on any desktop instead of the ragged 5+3 that the old
+ * repeat(5, ...) produced. A 3-column band around 540-660px leaves two tiles
+ * on the last row; that is the grid responding to real width, not a breakpoint
+ * artefact, and it is left-aligned like any grid. */
+.key-readings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(max(9.5rem, calc((100% - 3 * var(--space-4)) / 4)), 1fr));
+  gap: max(var(--space-4), calc((100% - 4 * 20rem) / 3));
+  justify-content: center;
+}
+/* The cards used to be a single row, so they carried a right border and a
+ * `:last-child { border-right: 0 }` to close the strip. A fluid grid has no
+ * fixed row, so the hairline now fills both trailing edges: every seam between
+ * two cards is drawn exactly once, whatever column count the grid picks. */
+.key-readings-grid .weather-card { border-right: var(--rule-hair) solid var(--rule); border-bottom: var(--rule-hair) solid var(--rule); }
 .weather-card {
   min-width: 0;
   padding: var(--space-4) var(--space-5);
-  border-right: var(--rule-hair) solid var(--rule);
   background: none;
-}
-.weather-card:last-child { border-right: 0; }/* The figure: the outlier face, tabular, large, one weight. */
+}/* The figure: the outlier face, tabular, large, one weight. */
 
 .weather-card > p { margin-top: var(--space-3); color: var(--muted); font-size: var(--text-sm); max-width: none; }/* A measured state shows as a rule above the figure, not a tinted card. */
 /* Secondary measurements inside the drawer: same plate system, smaller. */
@@ -908,11 +930,6 @@ td {
   .brand { font-size: var(--text-base); }
 }
 
-@media (max-width: 1080px) {
-  .weather-card:nth-child(2) { border-right: 0; }
-  .weather-card:nth-child(n + 3) { border-top: var(--rule-hair) solid var(--rule); }
-}
-
 @media (max-width: 900px) {
   .risk-scene-stage { min-height: 300px; }
 }
@@ -920,8 +937,6 @@ td {
 @media (max-width: 680px) {
   .page-content { padding: var(--space-6) var(--gutter) var(--space-10); }
   .page { gap: var(--space-6); }
-  .weather-card { border-right: 0; border-bottom: var(--rule-hair) solid var(--rule); }
-  .weather-card:last-child { border-bottom: 0; }
   .risk-scene-stage { min-height: 290px; }
   .risk-scene-inspector { flex-direction: column; gap: var(--space-1); padding: var(--space-3) var(--space-4); }
   .risk-scene-inspector-time { text-align: left; }
@@ -1061,7 +1076,6 @@ td {
 .uploaded-alert-footer { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-top: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--dashboard-card-rule); color: var(--dashboard-card-ink-2); font-size: var(--text-sm); }
 .uploaded-alert-footer a { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--dashboard-card-ink); font-weight: 600; text-decoration: none; }
 .uploaded-alert-footer a:hover { text-decoration: underline; }.uploaded-panel-heading h2 { margin-top: var(--space-1); color: var(--ink); font-family: var(--font-body); font-size: var(--text-xl); font-weight: 650; letter-spacing: 0; text-transform: none; }.uploaded-panel-heading .uploaded-eyebrow { color: var(--muted); }
-.uploaded-metrics-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-4); border: 0; background: transparent; }
 .uploaded-tile {
   --ink: var(--dashboard-card-ink);
   --ink-2: var(--dashboard-card-ink-2);
@@ -1099,7 +1113,7 @@ td {
 .uploaded-tile.risk-extreme { box-shadow: inset 0 3px 0 var(--risk-severe); }
 .uploaded-action-value { color: var(--ink); font-family: var(--font-body); font-size: var(--text-xl); font-weight: 700; }
 
-.uploaded-dashboard-lower-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: var(--space-4); }
+.uploaded-dashboard-lower-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); align-items: start; gap: var(--space-4); }
 .uploaded-panel { min-width: 0; padding: var(--space-5); border: var(--rule-hair) solid var(--rule); border-radius: var(--radius); background: var(--plate); color: var(--ink); box-shadow: var(--shadow); }
 .uploaded-panel-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); }
 .uploaded-panel-heading .uploaded-eyebrow { color: var(--dashboard-card-muted); }
@@ -1131,8 +1145,6 @@ td {
 .mission-panel progress::-moz-progress-bar { border-radius: var(--radius-pill); background: var(--dashboard-card-ink); }
 
 @media (max-width: 900px) {
-  .uploaded-metrics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .uploaded-dashboard-lower-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
 @media (max-width: 580px) {
@@ -1146,7 +1158,7 @@ td {
   .uploaded-alert-heading { align-items: flex-start; }
   .uploaded-alert h2 { font-size: var(--text-xl); }
   .uploaded-alert-footer { align-items: flex-start; flex-direction: column; }
-  .uploaded-metrics-grid { gap: var(--space-2); }
+  .key-readings-grid { gap: var(--space-2); }
   .uploaded-tile { min-height: 124px; padding: var(--space-3); }
   .uploaded-tile-value { font-size: var(--text-2xl); }
   .uploaded-tile-heading { font-size: var(--text-xs); }
@@ -1155,8 +1167,8 @@ td {
 
 /* --- The three screens from Web_page.figcraft ---------------------------- */
 
-.uploaded-site-shell { min-height: 100dvh; }
-.uploaded-page-content { min-height: 100dvh; }
+.uploaded-site-shell { min-height: 100vh; min-height: 100svh; }
+.uploaded-page-content { min-height: auto; }
 
 /* Masthead. Notify and Profile share the top row, centred on one baseline, so
  * neither floats against a taller neighbour. City selection drops to its own
@@ -1212,7 +1224,7 @@ td {
 
 /* --- AI Assistant -------------------------------------------------------- */
 
-.assistant-page { position: relative; display: flex; min-height: calc(100dvh - 64px); flex-direction: column; overflow: clip; }
+.assistant-page { position: relative; display: flex; min-height: calc(100dvh - 64px); min-height: 100%; flex-direction: column; overflow: clip; }
 .assistant-topbar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
 .assistant-back-link,
 .assistant-menu-trigger {
@@ -1374,8 +1386,8 @@ td {
 
 /* --- Menu page ----------------------------------------------------------- */
 
-.menu-page { width: min(100%, 760px); min-height: calc(100dvh - 64px); margin: 0 auto; }
-.menu-topbar { display: grid; grid-template-columns: 44px 1fr 96px; align-items: center; gap: var(--space-3); }
+.menu-page { width: min(100%, 760px); min-height: calc(100dvh - 64px); min-height: 100%; margin: 0 auto; }
+.menu-topbar { display: grid; grid-template-columns: clamp(2.25rem, 6vw, 2.75rem) minmax(0, 1fr) clamp(4.5rem, 12vw, 6rem); align-items: center; gap: var(--space-3); }
 .menu-back-link {
   display: grid;
   width: 44px;
@@ -1485,8 +1497,6 @@ td {
 .chat-history-drawer .chat-history-recents { flex: 0; }
 
 @media (max-width: 680px) {
-  .uploaded-metrics-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-1); }
-  .uploaded-dashboard-lower-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
   .uploaded-page-content { padding: var(--space-4) var(--space-3) var(--space-6); }
   .dashboard-topbar { gap: var(--space-2); }
   .dashboard-brand { gap: var(--space-2); font-size: var(--text-base); }
@@ -1611,7 +1621,7 @@ td {
 .dashboard-section-heading { display: flex; align-items: end; justify-content: space-between; gap: var(--space-3); margin-top: var(--space-2); }
 .dashboard-section-heading h2 { margin-top: var(--space-1); font-family: var(--font-body); font-size: var(--text-xl); font-weight: 700; letter-spacing: -0.025em; text-transform: none; }
 .dashboard-section-heading > span { color: var(--muted); font-size: var(--text-xs); }
-.uploaded-metrics-grid { margin-top: calc(-1 * var(--space-2)); }
+.key-readings-grid { margin-top: calc(-1 * var(--space-2)); }
 .uploaded-tile { min-height: 152px; padding: var(--space-5); }
 .uploaded-tile-heading svg { color: var(--accent-text); }
 .uploaded-tile-value { font-size: 2.25rem; font-weight: 600; letter-spacing: -0.025em; }
@@ -1634,7 +1644,6 @@ td {
   .uploaded-alert { padding: var(--space-5); }
   .uploaded-alert h2 { font-size: var(--text-2xl); }
   .dashboard-section-heading > span { text-align: right; }
-  .uploaded-metrics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
   .uploaded-tile { min-height: 132px; gap: var(--space-2); padding: var(--space-4); }
   .uploaded-tile-heading { gap: var(--space-2); font-size: var(--text-sm); }
   .uploaded-tile-heading svg { width: 17px; height: 17px; }
@@ -1642,7 +1651,6 @@ td {
   .uploaded-tile-value small { width: auto; font-size: var(--text-xs); }
   .uploaded-tile-detail { font-size: var(--text-xs); line-height: 1.4; }
   .uploaded-action-value { font-size: var(--text-lg); }
-  .uploaded-dashboard-lower-grid { grid-template-columns: minmax(0, 1fr); gap: var(--space-3); }
   .uploaded-panel { padding: var(--space-5); }
   .uploaded-panel-heading .uploaded-eyebrow { font-size: var(--text-sm); }
   .uploaded-panel-heading h2 { font-size: var(--text-xl); }
@@ -1691,7 +1699,7 @@ td {
   gap: var(--space-5);
   margin: 0 auto;
 }
-.profile-topbar { display: grid; grid-template-columns: 44px 1fr 96px; align-items: center; gap: var(--space-3); }
+.profile-topbar { display: grid; grid-template-columns: clamp(2.25rem, 6vw, 2.75rem) minmax(0, 1fr) clamp(4.5rem, 12vw, 6rem); align-items: center; gap: var(--space-3); }
 .profile-back-link {
   display: grid;
   width: 44px;
@@ -1750,7 +1758,7 @@ td {
 .profile-identity-copy strong { font-family: var(--font-body); font-size: var(--text-lg); font-weight: 600; }
 .profile-identity-copy small { color: var(--muted); font-size: var(--text-sm); }
 .profile-photo-actions { display: inline-flex; gap: var(--space-2); }
-.profile-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+.profile-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: var(--space-4); }
 .profile-field { display: grid; gap: var(--space-2); }
 .profile-field > span,
 .settings-time-row label > span {
@@ -2029,12 +2037,10 @@ html[data-contrast='high'] {
 
 @media (max-width: 680px) {
   .profile-page { min-height: calc(100dvh - 48px); }
-  .profile-topbar { grid-template-columns: 40px 1fr 84px; }
   .profile-back-link { width: 40px; height: 40px; }
   .profile-card,
   .settings-section { padding: var(--space-4); border-radius: var(--radius); }
   .profile-avatar { width: 60px; height: 60px; }
-  .profile-fields { grid-template-columns: 1fr; }
   .profile-photo-actions { width: 100%; }
   .settings-row { flex-wrap: wrap; }
   .settings-row-control { width: 100%; justify-content: flex-start; }
@@ -2354,7 +2360,7 @@ html[data-contrast='high'] {
 }
 .day-planner-window-list strong { color: var(--ink); }
 .day-planner-caveat { margin: 0; color: var(--muted); font-size: var(--text-xs); line-height: 1.55; }
-.day-planner-blocks { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.day-planner-blocks { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 7.5rem), 1fr)); gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
 .day-planner-block {
   display: grid;
   justify-items: start;
@@ -2385,7 +2391,6 @@ html[data-contrast='high'] {
 
 @media (max-width: 680px) {
   .day-planner-hour { min-width: 64px; flex-basis: 64px; }
-  .day-planner-blocks { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .day-planner-summary { font-size: var(--text-xs); }
 }
 
