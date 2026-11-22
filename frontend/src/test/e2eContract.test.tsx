@@ -74,6 +74,31 @@ describe('e2e/official-sources.spec.ts selectors', () => {
   }, 30000)
 })
 
+describe('dashboard masthead', () => {
+  /**
+   * The dashboard has no Menu entry: the menu page is reached from the
+   * assistant drawer. This is an explicit product decision, so it is asserted
+   * rather than left implicit — and the reachability half is checked too, so a
+   * future tidy-up cannot strand /menu with no way in.
+   */
+  it('offers Notify and Profile but no Menu, and /menu stays reachable', async () => {
+    const user = userEvent.setup()
+    renderApp('/')
+    await screen.findByRole('heading', { name: 'Heat Shield dashboard for Mumbai' })
+
+    expect(screen.queryByRole('link', { name: 'Menu' })).toBeNull()
+    expect(screen.getByRole('link', { name: 'Notify' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Profile' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('link', { name: /AI Assistant/ }))
+    await screen.findByRole('heading', { name: 'Heat Shield AI' })
+    await user.click(screen.getByRole('button', { name: 'Open menu' }))
+    const drawer = screen.getByRole('complementary', { name: 'Menu' })
+    await user.click(within(drawer).getByRole('link', { name: 'Open full menu' }))
+    expect(await screen.findByRole('heading', { level: 1, name: 'Menu' })).toBeInTheDocument()
+  }, 30000)
+})
+
 describe('e2e/live-weather.spec.ts selectors', () => {
   it('resolves the assistant drawer and its New Chat control', async () => {
     const user = userEvent.setup()

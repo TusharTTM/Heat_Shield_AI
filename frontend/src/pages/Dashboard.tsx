@@ -6,7 +6,6 @@ import {
   Droplets,
   FileText,
   Flame,
-  Menu as MenuIcon,
   MessageCircle,
   ShieldCheck,
   Sun,
@@ -86,7 +85,6 @@ export default function Dashboard() {
       </Link>
       <div className="dashboard-top-actions">
         <a href="#situation-alert" className="dashboard-notify" aria-label={t('dash.notify')}><BellRing size={17} aria-hidden="true" /><span className="dashboard-action-label">{t('dash.notify')}</span></a>
-        <Link to="/menu" className="dashboard-notify" aria-label={t('nav.menu')}><MenuIcon size={17} aria-hidden="true" /><span className="dashboard-action-label">{t('nav.menu')}</span></Link>
         <Link to="/profile" className="dashboard-profile"><UserRound size={17} aria-hidden="true" /><span>{t('nav.profile')}</span></Link>
       </div>
     </header>
