@@ -25,7 +25,11 @@ test('live weather fills the uploaded Dashboard and all three screens navigate',
   await expect(cards.nth(1)).toContainText(`${heatIndexC(current.temperature_2m, current.relative_humidity_2m).toFixed(1)}°C`)
   await expect(cards.nth(2)).toContainText(`${current.relative_humidity_2m}%`)
   await expect(page.getByRole('heading', { name: 'AI suggestions' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Heat mission progress' })).toBeVisible()
+  // The mission-progress score is gone; navigation now sits below the readings
+  // grid instead of inside it.
+  await expect(page.getByRole('heading', { name: 'Heat mission progress' })).toHaveCount(0)
+  await expect(page.locator('.key-readings-grid .uploaded-action-tile')).toHaveCount(0)
+  await expect(page.getByRole('navigation', { name: 'More from Heat Shield' })).toBeVisible()
 
   await page.getByRole('link', { name: /AI Assistant/ }).click()
   await expect(page.getByRole('heading', { name: 'Heat Shield AI' })).toBeVisible()
