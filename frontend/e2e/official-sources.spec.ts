@@ -13,8 +13,17 @@ test('the uploaded screens work on mobile with unavailable weather services', as
 
   await page.getByRole('link', { name: /AI Assistant/ }).click()
   await expect(page.getByRole('heading', { name: 'Heat Shield AI' })).toBeVisible()
-  await page.getByRole('link', { name: 'Menu' }).click()
-  await expect(page.getByRole('heading', { name: 'Menu' })).toBeVisible()
+  // Menu is a drawer opened by a button on the assistant screen, not a route:
+  // the assistant reaches the full menu page through the drawer's own link.
+  await page.getByRole('button', { name: 'Open menu' }).click()
+  const drawer = page.getByRole('complementary', { name: 'Menu' })
+  await expect(drawer.getByRole('heading', { name: 'Chat history' })).toBeVisible()
+  await expect(drawer.getByRole('button', { name: 'New Chat' })).toBeVisible()
+  await drawer.getByRole('link', { name: 'Open full menu' }).click()
+  // Level-1: the drawer also has an h2 "Menu", which would match a bare
+  // heading query while the lazy Menu route is still loading.
+  await expect(page.getByRole('heading', { level: 1, name: 'Menu' })).toBeVisible()
+  await expect(page.getByRole('complementary', { name: 'Menu' })).toHaveCount(0)
   await expect(page.getByRole('link', { name: 'New Chat' })).toBeVisible()
 
   const dimensions = await page.evaluate(() => ({ page: document.documentElement.scrollWidth, viewport: window.innerWidth }))

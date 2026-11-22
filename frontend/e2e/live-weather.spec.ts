@@ -31,10 +31,12 @@ test('live weather fills the uploaded Dashboard and all three screens navigate',
   await expect(page.getByRole('heading', { name: 'Heat Shield AI' })).toBeVisible()
   await expect(page.getByRole('textbox', { name: 'Ask Heat Shield' })).toBeVisible()
 
-  await page.getByRole('link', { name: 'Menu' }).click()
-  await expect(page.getByRole('heading', { name: 'Pinned' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Recents' })).toBeVisible()
-  await page.getByRole('link', { name: 'New Chat' }).click()
+  await page.getByRole('button', { name: 'Open menu' }).click()
+  // Chat history is a single list headed "Chat history"; the old Pinned/Recents
+  // split no longer exists. "New Chat" is a button in the drawer.
+  const drawer = page.getByRole('complementary', { name: 'Menu' })
+  await expect(drawer.getByRole('heading', { name: 'Chat history' })).toBeVisible()
+  await drawer.getByRole('button', { name: 'New Chat' }).click()
   await expect(page.getByRole('heading', { name: 'Heat Shield AI' })).toBeVisible()
 
   const dimensions = await page.evaluate(() => ({ page: document.documentElement.scrollWidth, viewport: window.innerWidth }))
