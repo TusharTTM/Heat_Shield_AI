@@ -23,7 +23,14 @@ def test_backend_loads_only_version_matched_artifact_and_explains_prediction(set
     model.fit(features[FEATURE_COLUMNS], target)
     metadata = {
         "model_version": "synthetic-integration-v1", "trained_at": "2026-01-01T00:00:00+00:00",
-        "dataset_type": "synthetic_pipeline_test", "selected_model": {"name": "Linear Regression", "metrics": {"mae": 1.0, "rmse": 1.5, "r2": 0.0}},
+        # Promotion gate: only a verified reanalysis pair is served, so this
+        # fixture declares the provenance real training writes. The model itself
+        # is still an explicit synthetic pipeline fixture in tmp_path.
+        "dataset_type": "historical_weather_reanalysis",
+        "promotion_eligible": True,
+        "source_metadata_failures": [],
+        "source_metadata_sha256_match": True,
+        "selected_model": {"name": "Linear Regression", "metrics": {"mae": 1.0, "rmse": 1.5, "r2": 0.0}},
     }
     model_path = tmp_path / "model.joblib"
     metadata_path = tmp_path / "model.json"
@@ -53,6 +60,45 @@ def test_backend_rejects_mismatched_model_metadata(settings, tmp_path):
     metadata_path = tmp_path / "model.json"
     joblib.dump({"metadata": {"model_version": "one"}}, model_path)
     metadata_path.write_text(json.dumps({"model_version": "two"}))
+    settings.ml_model_path = model_path
+    settings.ml_metadata_path = metadata_path
+    with TestClient(create_app(settings)) as client:
+        assert client.get("/api/v1/ml/status").json()["status"] == "unavailable"
+
+
+def test_unpromotable_artifact_is_not_served(settings, tmp_path):
+    """A synthetic / failed-ingestion artifact pair must never answer predictions."""
+    metadata = {
+        "model_version": "synthetic-unpromotable-v1", "trained_at": "2026-01-01T00:00:00+00:00",
+        "dataset_type": "synthetic_pipeline_test", "promotion_eligible": False,
+        "source_metadata_failures": ["mumbai: synthetic fixture"],
+        "selected_model": {"name": "Linear Regression", "metrics": {"mae": 1.0, "rmse": 1.5, "r2": 0.0}},
+    }
+    model_path = tmp_path / "model.joblib"
+    metadata_path = tmp_path / "model.json"
+    joblib.dump({"metadata": metadata}, model_path)
+    metadata_path.write_text(json.dumps(metadata))
+    settings.ml_model_path = model_path
+    settings.ml_metadata_path = metadata_path
+    with TestClient(create_app(settings)) as client:
+        status = client.get("/api/v1/ml/status").json()
+        assert status["status"] == "unavailable"
+        assert status["status_detail"] == "artifact is not marked promotion_eligible"
+        assert status["promotion_eligible"] is False
+        response = client.post("/api/v1/ml/predict", json={
+            "region": "mumbai", "target_date": "2026-05-16",
+            "recent_max_temperatures": [38, 39, 40], "humidity_pct": 50,
+        })
+        assert response.status_code == 503
+        assert response.json()["code"] == "MODEL_UNAVAILABLE"
+
+
+def test_artifact_pair_is_rejected_before_deserialisation_when_unverified(settings, tmp_path):
+    """The metadata gate runs before joblib.load, so unpromotable blobs are never executed."""
+    model_path = tmp_path / "model.joblib"
+    metadata_path = tmp_path / "model.json"
+    model_path.write_bytes(b"not a joblib payload")
+    metadata_path.write_text(json.dumps({"model_version": "v1", "promotion_eligible": False}))
     settings.ml_model_path = model_path
     settings.ml_metadata_path = metadata_path
     with TestClient(create_app(settings)) as client:

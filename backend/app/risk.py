@@ -48,7 +48,10 @@ def classify_heat_risk(index_c: float) -> tuple[str, str]:
         if band["maximum_heat_index_c"] is None or index_c < band["maximum_heat_index_c"]:
             underlying = band["level"]
             break
-    return DISPLAY_LEVELS[underlying], underlying
+    # The levels come from the shared, editable thresholds file. An added level
+    # without a display mapping must degrade to the cautious "high" display band
+    # instead of raising KeyError and turning every risk call into a 500.
+    return DISPLAY_LEVELS.get(underlying, "high"), underlying
 
 
 def risk_result(temperature_c: float, humidity_pct: float) -> dict:

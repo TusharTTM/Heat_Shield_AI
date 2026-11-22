@@ -3,7 +3,8 @@ from typing import Any
 
 import httpx
 
-from .weather import _number, _parse_provider_time
+from .http_client import _ClientProvider
+from .weather import WeatherProviderError, _number, _parse_provider_time
 
 
 SOURCE = "Open-Meteo Air Quality API (CAMS model)"
@@ -21,20 +22,22 @@ class AirQualityProviderError(RuntimeError):
     pass
 
 
-class AirQualityClient:
+class AirQualityClient(_ClientProvider):
     """Source-aware CAMS model client; never represents values as CPCB station observations."""
+
+    _follow_redirects = True
 
     def __init__(self, base_url: str, timeout_seconds: float = 10, transport: httpx.BaseTransport | None = None):
         self.base_url = base_url
         self.timeout_seconds = timeout_seconds
         self.transport = transport
+        self._client = None
 
     def _get(self, params: dict[str, Any]) -> dict:
         try:
-            with httpx.Client(timeout=self.timeout_seconds, transport=self.transport) as client:
-                response = client.get(self.base_url, params=params)
-                response.raise_for_status()
-                payload = response.json()
+            response = self._get_client().get(self.base_url, params=params)
+            response.raise_for_status()
+            payload = response.json()
         except (httpx.HTTPError, ValueError) as exc:
             raise AirQualityProviderError("Air-quality provider request failed") from exc
         if not isinstance(payload, dict) or payload.get("error"):
@@ -85,7 +88,10 @@ class AirQualityClient:
                     "region_slug": region["slug"], "model_time": model_time,
                     "retrieved_at": current_values["retrieved_at"], **values, "source": SOURCE,
                 })
-        except (IndexError, TypeError, ValueError) as exc:
+        except (IndexError, TypeError, ValueError, WeatherProviderError) as exc:
+            # _number/_parse_provider_time raise WeatherProviderError; without this
+            # the error escapes the service's AirQualityProviderError handler and
+            # turns one bad hourly value into an unhandled 500.
             raise AirQualityProviderError("Provider returned invalid hourly air-quality data") from exc
         if not rows:
             raise AirQualityProviderError("Provider returned no hourly air-quality estimates")

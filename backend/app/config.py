@@ -1,7 +1,15 @@
+"""Server-only configuration. No secret is exposed through an API response."""
+
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Sensor keys guard ingestion and reading retrieval. The docs ask for at least
+# 32 random characters, so anything shorter is rejected at startup instead of
+# quietly protecting a device endpoint with a guessable secret.
+MIN_SENSOR_API_KEY_LENGTH = 32
 
 
 class Settings(BaseSettings):
@@ -25,7 +33,7 @@ class Settings(BaseSettings):
     sachet_feed_url: str = "https://sachet.ndma.gov.in/cap_public_website/rss/rss_india.xml"
     sachet_timeout_seconds: float = 12
     sachet_cache_seconds: int = 300
-    sachet_max_cap_documents: int = 150
+    sachet_max_cap_documents: int = 50
     weather_cache_seconds: int = 600
     sensor_api_key: str = ""
     sensor_stale_seconds: int = 900
@@ -35,11 +43,25 @@ class Settings(BaseSettings):
     assistant_base_url: str = "https://api.openai.com/v1"
     assistant_model: str = "gpt-4o-mini"
     assistant_timeout_seconds: float = 30
-    assistant_max_output_tokens: int = 700
+    assistant_max_output_tokens: int = Field(default=700, ge=64, le=4096)
+    assistant_rate_limit_per_minute: int = Field(default=20, ge=1)
+    # Bounds how many regions a single /api/v1/risk fan-out probes in parallel.
+    risk_map_workers: int = Field(default=4, ge=1, le=16)
 
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
+    @field_validator("sensor_api_key")
+    @classmethod
+    def sensor_key_is_strong(cls, value: str) -> str:
+        key = value.strip()
+        if key and len(key) < MIN_SENSOR_API_KEY_LENGTH:
+            raise ValueError(
+                f"sensor_api_key must be empty or at least {MIN_SENSOR_API_KEY_LENGTH} characters "
+                "(generate a random value; do not use a short password)"
+            )
+        return key
 
 
 @lru_cache

@@ -1,3 +1,4 @@
+import json
 import math
 from datetime import date
 
@@ -10,6 +11,26 @@ class ModelUnavailable(RuntimeError):
     pass
 
 
+def _promotion_rejection(metadata: dict) -> str | None:
+    """Return why an artifact pair may not be served, or None when it may.
+
+    Training only marks a pair ``promotion_eligible`` when the dataset hash
+    matches the real ingestion manifest and the ingestion recorded no failures.
+    Everything else in this project refuses to present synthetic or unverified
+    fixtures as real output, so serving must apply the same gate rather than
+    checking only that the two files agree on a version string.
+    """
+    if metadata.get("promotion_eligible") is not True:
+        return "artifact is not marked promotion_eligible"
+    if metadata.get("dataset_type") != "historical_weather_reanalysis":
+        return "artifact dataset is not verified historical reanalysis"
+    if metadata.get("source_metadata_failures"):
+        return "artifact ingestion recorded failures"
+    if metadata.get("source_metadata_sha256_match") is False:
+        return "artifact dataset hash does not match its ingestion manifest"
+    return None
+
+
 class ModelService:
     def __init__(self, settings: Settings):
         self.model_path = settings.ml_model_path
@@ -17,17 +38,30 @@ class ModelService:
         self.bundle = None
         self.metadata = None
         self.load_error = None
+        self.rejection_reason = None
+        # Metadata of an on-disk pair that was refused, kept only so /ml/status
+        # can explain the refusal. It is never used to answer predictions.
+        self.rejected_metadata = None
         if self.model_path.exists() and self.metadata_path.exists():
             try:
                 import joblib
-                self.bundle = joblib.load(self.model_path)
-                import json
                 disk_metadata = json.loads(self.metadata_path.read_text(encoding="utf-8"))
-                if self.bundle.get("metadata", {}).get("model_version") != disk_metadata.get("model_version"):
+                rejection = _promotion_rejection(disk_metadata)
+                if rejection is not None:
+                    # Artifacts are only deserialised after the metadata gate:
+                    # joblib.load executes code, so nothing unverified is loaded.
+                    self.rejection_reason = rejection
+                    self.rejected_metadata = disk_metadata
+                    self.load_error = "ARTIFACT_NOT_PROMOTABLE"
+                    return
+                bundle = joblib.load(self.model_path)
+                if bundle.get("metadata", {}).get("model_version") != disk_metadata.get("model_version"):
                     raise ValueError("Model and metadata versions do not match")
+                self.bundle = bundle
                 self.metadata = disk_metadata
             except Exception as exc:  # artifact errors must not expose local paths or traces
                 self.bundle = None
+                self.metadata = None
                 self.load_error = type(exc).__name__
 
     @property
@@ -35,6 +69,12 @@ class ModelService:
         if self.metadata is not None:
             return "loaded"
         return "unavailable" if self.load_error else "not_configured"
+
+    def status_detail(self) -> str | None:
+        """Operator-facing reason when an artifact pair exists but is not served."""
+        if self.metadata is not None:
+            return None
+        return self.rejection_reason or self.load_error
 
     def predict(self, region_slug: str, target_date: date, recent: list[float], humidity_pct: float | None) -> dict:
         if get_region(region_slug) is None:

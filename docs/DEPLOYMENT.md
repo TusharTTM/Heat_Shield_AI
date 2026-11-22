@@ -57,7 +57,7 @@ python3 -m venv .venv
 . .venv/bin/activate
 pip install -r backend/requirements.txt
 export DATABASE_URL='postgresql+psycopg://heatshield:URL_ENCODED_PASSWORD@DB_HOST:5432/heatshield'
-export SENSOR_API_KEY='GENERATE_A_LONG_RANDOM_VALUE'
+export SENSOR_API_KEY='GENERATE_A_LONG_RANDOM_VALUE_AT_LEAST_32_CHARS'  # shorter values are rejected at startup
 export CORS_ORIGINS='https://tusharttm.github.io'
 uvicorn backend.app.main:app --host 0.0.0.0 --port 8000
 ```
@@ -134,7 +134,23 @@ A ready status reports the configured model name and data policy; the chat respo
 
 On the standalone GitHub Pages deployment (`VITE_API_BASE_URL` empty) the assistant page shows an explicit "Assistant service not configured" setup notice with these steps instead of any answer. Chat history is stored in the browser's local storage on the device only; nothing syncs between devices.
 
-## 8. Evidence checklist
+## 8. Data retention and housekeeping
+
+This build stores provider and official-source data indefinitely; there is no built-in retention job. Size grows with weather/air-quality polling, every SACHET CAP document body, and every official alert ever seen. Before operating a long-lived instance, schedule a housekeeping job (cron or a managed-database scheduler) that deletes rows older than the window your policy allows and re-checks the indexes after pruning. Suggested starting points — adjust to your retention policy:
+
+```sql
+-- Weather and modelled air-quality history (keep what history endpoints should serve).
+DELETE FROM weather_observations     WHERE retrieved_at < now() - interval '90 days';
+DELETE FROM air_quality_observations WHERE retrieved_at < now() - interval '90 days';
+DELETE FROM air_quality_forecast_hours WHERE retrieved_at < interval '90 days';
+-- CAP documents and alerts once they are long expired.
+DELETE FROM official_alerts        WHERE expires IS NOT NULL AND expires < now() - interval '30 days';
+DELETE FROM external_document_cache WHERE checked_at < now() - interval '30 days';
+```
+
+Keep `official_alerts` rows that a current Cancel/Update message still references; pruning by expiry only is intentional. Take a backup before the first prune.
+
+## 9. Evidence checklist
 
 Record the environment, UTC time, endpoint, HTTP status, source/observed/retrieved timestamps, freshness, and test run IDs. Keep these categories distinct:
 

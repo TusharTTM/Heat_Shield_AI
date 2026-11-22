@@ -1,4 +1,9 @@
+import json
+from pathlib import Path
+
 from backend.app.risk import heat_index_c
+
+SHARED_REGIONS = json.loads((Path(__file__).resolve().parents[2] / "shared" / "regions.json").read_text(encoding="utf-8"))
 
 
 def test_health_regions_safety_and_openapi(client):
@@ -22,6 +27,15 @@ def test_health_regions_safety_and_openapi(client):
     assert schema.status_code == 200
     assert "/api/v1/weather/current/{slug}" in schema.json()["paths"]
     assert client.get("/docs").status_code == 200
+
+
+def test_regions_api_preserves_shared_coastal_flags(client):
+    """shared/regions.json stores `is_coastal`; the API must not report every city as inland."""
+    regions = {item["slug"]: item for item in client.get("/api/v1/regions").json()}
+    expected = {item["slug"]: item["is_coastal"] for item in SHARED_REGIONS}
+    assert {slug: item["coastal"] for slug, item in regions.items()} == expected
+    assert regions["mumbai"]["coastal"] is True
+    assert regions["pune"]["coastal"] is False
 
 
 def test_current_weather_is_provider_backed_timestamped_and_cached(client, provider):

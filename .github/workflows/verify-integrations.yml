@@ -56,6 +56,7 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
       - run: npx tsc -b
+      - run: npm run lint
       - run: npm test
       - run: npm run build
       # Production dependencies only: the dev toolchain (vite/vitest) is never
@@ -78,11 +79,28 @@ jobs:
       - run: npm ci
       - name: Install Chromium for mocked official-source desktop/mobile browser tests
         run: npx playwright install --with-deps chromium
-      - name: Execute desktop, 390px mobile, and 503 failure official-source specs
+      - name: Execute the mocked official-source Chromium spec
         run: |
           set -o pipefail
           npm run test:official-ui 2>&1 | tee "$RUNNER_TEMP/official-ui.txt"
-          echo '::notice title=Official-source Chromium verification::{"officialSourcesBrowserVerified":true,"specsPassed":3,"viewports":["1440x1000","390x844"]}'
+          python3 - "$RUNNER_TEMP/official-ui.txt" <<'PY'
+          import json
+          import re
+          import sys
+          from pathlib import Path
+
+          # Report what actually ran instead of a hard-coded count that can drift
+          # from the spec file.
+          output = Path(sys.argv[1]).read_text(errors="replace") if Path(sys.argv[1]).exists() else ""
+          passed = len(re.findall(r"^\s*\d+ passed", output, re.MULTILINE))
+          viewports = sorted(set(re.findall(r"width: (\d+), height: (\d+)", output)))
+          evidence = {
+              "officialSourcesBrowserVerified": bool(passed),
+              "specFilesExecuted": 1,
+              "viewports": [f"{width}x{height}" for width, height in viewports],
+          }
+          print(f"::notice title=Official-source Chromium verification::{json.dumps(evidence)}")
+          PY
       - name: Expose official-source browser failure tail
         if: failure()
         run: |

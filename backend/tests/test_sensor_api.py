@@ -1,3 +1,4 @@
+import threading
 from datetime import datetime, timedelta, timezone
 
 from fastapi.testclient import TestClient
@@ -57,3 +58,53 @@ def test_unconfigured_sensor_auth_fails_closed(settings, provider):
         response = client.post("/api/v1/sensors/readings", json={})
         assert response.status_code == 503
         assert response.json()["code"] == "SENSOR_AUTH_NOT_CONFIGURED"
+
+
+def test_same_instant_is_stored_once_regardless_of_offset(client, auth):
+    """Two encodings of one moment must not create two rows or two `created` responses."""
+    moment = (datetime.now(timezone.utc) - timedelta(minutes=1)).replace(microsecond=0)
+    ist = moment.astimezone(timezone(timedelta(hours=5, minutes=30)))
+    base = {"device_id": "offset-device", "temperature_c": 35.0, "humidity_pct": 50.0, "source": "physical"}
+
+    first = client.post("/api/v1/sensors/readings", json={**base, "observed_at": ist.isoformat()}, headers=auth)
+    second = client.post("/api/v1/sensors/readings", json={**base, "observed_at": moment.isoformat()}, headers=auth)
+
+    assert first.status_code == 201 and first.json()["created"] is True
+    assert second.status_code == 200 or second.status_code == 201
+    assert second.json()["created"] is False
+    assert first.json()["reading"]["id"] == second.json()["reading"]["id"]
+    rows = client.get("/api/v1/sensors/offset-device/readings", headers=auth).json()
+    assert len(rows) == 1
+    # The stored instant is the same moment, expressed in UTC.
+    assert rows[0]["observed_at"] == moment.isoformat().replace("+00:00", "Z")
+
+
+def test_reading_ahead_of_server_clock_is_online_not_stale(client, auth):
+    """Clock skew up to the accepted +5 minutes must not be reported as stale data."""
+    ahead = (datetime.now(timezone.utc) + timedelta(minutes=2)).isoformat()
+    accepted = client.post("/api/v1/sensors/readings", json={
+        "device_id": "clock-ahead-device", "observed_at": ahead, "temperature_c": 35.0,
+        "humidity_pct": 50.0, "source": "physical",
+    }, headers=auth)
+    assert accepted.status_code == 201
+    status = client.get("/api/v1/sensors/clock-ahead-device/status", headers=auth).json()
+    assert status["state"] == "online"
+
+
+def test_concurrent_duplicate_ingestion_does_not_raise(settings, simulated_reading, auth):
+    """The unique-constraint race must resolve to the stored row, not a 500."""
+    with TestClient(create_app(settings)) as concurrent_client:
+        results = []
+
+        def send():
+            results.append(concurrent_client.post("/api/v1/sensors/readings", json=simulated_reading, headers=auth))
+
+        threads = [threading.Thread(target=send) for _ in range(6)]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+        assert {response.status_code for response in results} <= {200, 201}
+        created = [response.json()["created"] for response in results]
+        assert created.count(True) == 1
+        assert len(set(response.json()["reading"]["id"] for response in results)) == 1

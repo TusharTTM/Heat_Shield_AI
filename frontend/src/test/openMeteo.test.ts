@@ -218,13 +218,30 @@ describe('Open-Meteo client', () => {
     expect(stale.warning).toMatch(/cached Open-Meteo response/)
   })
 
-  it('rejects unavailable or invalid air-quality responses without inventing values', async () => {
+  it('rejects unavailable air-quality responses without inventing values', async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({}, 503))
     await expect(getAirQuality(getRegion('mumbai'))).rejects.toThrow('HTTP 503')
+  })
+
+  it('drops one malformed hourly air-quality value instead of blanking the series', async () => {
+    // A single bad hour must not remove every hour (the backend now treats the
+    // same payload as a provider error). The bad hour becomes a visible gap and
+    // the other hours are still shown, never zero-filled.
     const invalid = airQualityPayload()
     invalid.hourly.european_aqi[2] = -1
     fetchMock.mockResolvedValueOnce(jsonResponse(invalid))
-    await expect(getAirQuality(getRegion('mumbai'))).rejects.toThrow('invalid optional forecast value')
+    const result = await getAirQuality(getRegion('mumbai'))
+    const expectedHours = (invalid.hourly.time as string[]).length
+    expect(result.data.hourlySeries.length).toBe(expectedHours - 1)
+    expect(result.data.hourlySeries.every((hour) => hour.europeanAqi === null || hour.europeanAqi >= 0)).toBe(true)
+    expect(result.data.usAqi).toBeGreaterThan(0)
+  })
+
+  it('rejects a current air-quality value that is out of range', async () => {
+    const invalid = airQualityPayload()
+    invalid.current = { ...invalid.current, us_aqi: -5 }
+    fetchMock.mockResolvedValueOnce(jsonResponse(invalid))
+    await expect(getAirQuality(getRegion('mumbai'))).rejects.toThrow('invalid us_aqi value')
   })
 
   it('retries once when an Open-Meteo or CAMS request aborts on timeout', async () => {

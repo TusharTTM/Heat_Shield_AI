@@ -1,5 +1,9 @@
 import hmac
 import logging
+import threading
+import time
+from collections import deque
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 from typing import Annotated
@@ -10,6 +14,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import select, text
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from .air_quality import AirQualityClient
@@ -55,8 +60,20 @@ def create_app(
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         Base.metadata.create_all(bind=engine)
-        yield
-        engine.dispose()
+        try:
+            yield
+        finally:
+            # Every provider adapter owns a pooled HTTP client; release the
+            # sockets on shutdown instead of waiting for interpreter teardown.
+            for name in ("weather_client", "air_quality_client", "cpcb_client", "sachet_client", "assistant_client"):
+                client = getattr(app.state, name, None)
+                close = getattr(client, "close", None)
+                if callable(close):
+                    try:
+                        close()
+                    except Exception:  # pragma: no cover - best-effort shutdown
+                        logger.warning("Failed to close %s", name, exc_info=True)
+            engine.dispose()
 
     app = FastAPI(
         title="HeatShield AI API", version="0.1.0", lifespan=lifespan,
@@ -195,20 +212,31 @@ def create_app(
         result = risk_result(current_values["temperature_c"], current_values["humidity_pct"])
         return {**result, "region": slug, "observed_at": current_values["observed_at"], "source": current_values["source"], "freshness": current_values["freshness"]}
 
-    @app.get("/api/v1/risk", tags=["risk"])
-    def risk_map(db: Session = Depends(get_db)):
-        results = []
-        for region in list_regions():
+    def risk_for_region(region: dict) -> dict:
+        # Each worker opens its own short session/transaction; SQLAlchemy sessions
+        # are not thread-safe and this endpoint runs the regions concurrently.
+        with session_factory() as session:
             try:
-                values = current_weather(db, region["slug"], app.state.weather_client, settings)
+                values = current_weather(session, region["slug"], app.state.weather_client, settings)
                 if values["temperature_c"] is None or values["humidity_pct"] is None:
                     raise ValueError("Missing risk inputs")
-                results.append({
+                return {
                     "location": region, "status": values["freshness"], "source": values["source"],
                     "observed_at": values["observed_at"], **risk_result(values["temperature_c"], values["humidity_pct"]),
-                })
-            except (HTTPException, ValueError):
-                results.append({"location": region, "status": "unavailable", "source": None, "observed_at": None})
+                }
+            except (HTTPException, ValueError, SQLAlchemyError):
+                session.rollback()
+                logger.warning("Risk map region unavailable: %s", region["slug"])
+                return {"location": region, "status": "unavailable", "source": None, "observed_at": None}
+
+    @app.get("/api/v1/risk", tags=["risk"])
+    def risk_map():
+        # Fifteen regions probed sequentially cost fifteen provider round-trips
+        # (~2.5s even at low latency) and are trivially rate-limited upstream, so
+        # fan out over a bounded pool and merge results in configuration order.
+        regions = list(list_regions())
+        with ThreadPoolExecutor(max_workers=min(settings.risk_map_workers, len(regions))) as pool:
+            results = list(pool.map(risk_for_region, regions))
         return results
 
     @app.get("/api/v1/safety/{level}", response_model=SafetyResponse, tags=["safety"])
@@ -219,11 +247,15 @@ def create_app(
 
     @app.post("/api/v1/sensors/readings", response_model=SensorIngestResponse, status_code=201, tags=["sensors"])
     def ingest_sensor(reading: SensorReadingCreate, db: Session = Depends(get_db), _: None = Depends(require_sensor_key)):
-        if reading.observed_at > utc_now() + timedelta(minutes=5):
+        # Store one canonical instant. A device sending the same moment as
+        # "+05:30" and then "Z" must not create two rows, and SQLite stores the
+        # wall clock verbatim, so normalise before the uniqueness lookup.
+        observed_at = as_utc(reading.observed_at)
+        if observed_at > utc_now() + timedelta(minutes=5):
             raise HTTPException(status_code=422, detail={"code": "TIMESTAMP_IN_FUTURE", "detail": "observed_at cannot be more than five minutes in the future."})
-        if reading.observed_at < utc_now() - timedelta(days=3650):
+        if observed_at < utc_now() - timedelta(days=3650):
             raise HTTPException(status_code=422, detail={"code": "TIMESTAMP_TOO_OLD", "detail": "observed_at is outside the accepted ingestion window."})
-        existing = db.scalar(select(SensorReading).where(SensorReading.device_id == reading.device_id, SensorReading.observed_at == reading.observed_at))
+        existing = db.scalar(select(SensorReading).where(SensorReading.device_id == reading.device_id, SensorReading.observed_at == observed_at))
         incoming_simulated = reading.source == "simulated"
         if existing:
             same = (
@@ -235,12 +267,25 @@ def create_app(
                 raise HTTPException(status_code=409, detail={"code": "READING_CONFLICT", "detail": "This device/timestamp already contains different values."})
             return SensorIngestResponse(created=False, reading=SensorReadingResponse(**sensor_dict(existing)))
         stored = SensorReading(
-            device_id=reading.device_id, observed_at=reading.observed_at, received_at=utc_now(),
+            device_id=reading.device_id, observed_at=observed_at, received_at=utc_now(),
             temperature_c=reading.temperature_c, humidity_pct=reading.humidity_pct,
             wind_speed_kmh=reading.wind_speed_kmh, is_simulated=incoming_simulated, note=reading.note,
         )
         db.add(stored)
-        db.commit()
+        try:
+            db.commit()
+        except IntegrityError:
+            # Two devices retrying the same reading raced between the lookup and
+            # the insert. Fall back to the stored row instead of a 500.
+            db.rollback()
+            raced = db.scalar(select(SensorReading).where(
+                SensorReading.device_id == reading.device_id, SensorReading.observed_at == observed_at,
+            ))
+            if raced is None:
+                raise
+            if raced.temperature_c != reading.temperature_c or raced.humidity_pct != reading.humidity_pct:
+                raise HTTPException(status_code=409, detail={"code": "READING_CONFLICT", "detail": "This device/timestamp already contains different values."}) from None
+            return SensorIngestResponse(created=False, reading=SensorReadingResponse(**sensor_dict(raced)))
         db.refresh(stored)
         return SensorIngestResponse(created=True, reading=SensorReadingResponse(**sensor_dict(stored)))
 
@@ -254,21 +299,29 @@ def create_app(
         reading = db.scalar(select(SensorReading).where(SensorReading.device_id == device_id).order_by(SensorReading.observed_at.desc()).limit(1))
         if reading is None:
             return {"device_id": device_id, "state": "no_data", "last_reading_at": None, "is_simulated": None}
+        # Ingest accepts observed_at up to five minutes ahead (device clock skew),
+        # so a negative age is a fresh reading, not a stale one.
         age = (utc_now() - as_utc(reading.observed_at)).total_seconds()
         return {
-            "device_id": device_id, "state": "online" if 0 <= age <= settings.sensor_stale_seconds else "stale",
+            "device_id": device_id, "state": "online" if age <= settings.sensor_stale_seconds else "stale",
             "last_reading_at": as_utc(reading.observed_at), "is_simulated": reading.is_simulated,
         }
 
     @app.get("/api/v1/ml/status", tags=["ml"])
     def ml_status():
         service: ModelService = app.state.model_service
-        metadata = service.metadata
+        # `served` distinguishes the live model's manifest from the manifest of a
+        # refused pair, which is shown only to explain the refusal.
+        metadata = service.metadata or service.rejected_metadata
         return {
-            "status": service.status, "model_version": metadata.get("model_version") if metadata else None,
+            "status": service.status, "served": service.metadata is not None,
+            "model_version": metadata.get("model_version") if metadata else None,
             "selected_model": metadata.get("selected_model") if metadata else None,
             "trained_at": metadata.get("trained_at") if metadata else None,
             "dataset_type": metadata.get("dataset_type") if metadata else None,
+            "promotion_eligible": metadata.get("promotion_eligible") if metadata else None,
+            # Why a present artifact pair is not served (unpromotable, bad hash, mismatch).
+            "status_detail": service.status_detail(),
         }
 
     @app.post("/api/v1/ml/predict", response_model=PredictionResponse, tags=["ml"])
@@ -295,13 +348,39 @@ def create_app(
             "data_policy": DATA_POLICY,
         }
 
+    # Per-client sliding window. The chat endpoint spends provider tokens on
+    # every call, so a single client must not be able to run up unbounded cost.
+    assistant_buckets: dict[str, deque[float]] = {}
+    assistant_bucket_lock = threading.Lock()
+
+    def enforce_assistant_rate(request: Request) -> None:
+        client_key = request.client.host if request.client else "unknown"
+        now = time.monotonic()
+        window = 60.0
+        with assistant_bucket_lock:
+            bucket = assistant_buckets.setdefault(client_key, deque())
+            while bucket and now - bucket[0] > window:
+                bucket.popleft()
+            if len(bucket) >= settings.assistant_rate_limit_per_minute:
+                retry_after = max(1, int(window - (now - bucket[0])))
+                raise HTTPException(
+                    status_code=429,
+                    detail={"code": "ASSISTANT_RATE_LIMITED", "detail": "Too many assistant requests. Try again shortly."},
+                    headers={"Retry-After": str(retry_after)},
+                )
+            bucket.append(now)
+            if len(assistant_buckets) > 10_000:  # bound the key space on long-lived processes
+                for stale in [key for key, entries in assistant_buckets.items() if not entries]:
+                    del assistant_buckets[stale]
+
     @app.post("/api/v1/assistant/chat", response_model=AssistantChatResponse, tags=["assistant"])
-    def assistant_chat(request: AssistantChatRequest):
+    def assistant_chat(request: AssistantChatRequest, http_request: Request):
         if not settings.assistant_api_key:
             raise HTTPException(status_code=503, detail={
                 "code": "ASSISTANT_NOT_CONFIGURED",
                 "detail": "The AI assistant provider is not configured on this server.",
             })
+        enforce_assistant_rate(http_request)
         payload = request.model_dump(mode="json")
         try:
             reply = app.state.assistant_client.chat(payload)

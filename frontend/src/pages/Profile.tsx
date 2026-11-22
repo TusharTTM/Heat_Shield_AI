@@ -367,7 +367,7 @@ export default function Profile() {
           disabled={!heatAlerts.earlyWarnings}
           onChange={(event) => patchSettings({ heatAlerts: { ...heatAlerts, leadHours: Number(event.target.value) } })}
         >
-          {LEAD_TIMES.map((hours) => <option key={hours} value={hours}>{t('profile.leadOption', { hours, plural: hours > 1 ? 's' : '' })}</option>)}
+          {LEAD_TIMES.map((hours) => <option key={hours} value={hours}>{t('profile.leadOption', { hours })}</option>)}
         </select>
       </SettingRow>
       <fieldset className="settings-fieldset">

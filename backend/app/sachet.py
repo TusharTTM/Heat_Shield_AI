@@ -8,6 +8,7 @@ from xml.etree import ElementTree
 
 import httpx
 
+from .http_client import _ClientProvider
 
 PORTAL_URL = "https://sachet.ndma.gov.in/"
 FEED_GUIDE_URL = "https://sachet.ndma.gov.in/docs/Integration_Guide_For_Agencies.pdf"
@@ -86,11 +87,16 @@ def _polygon(value: str) -> list[list[float]]:
     return ring
 
 
-class SachetClient:
+class SachetClient(_ClientProvider):
     """Conditional RSS/CAP client with official-host/path restrictions and persistent-cache support."""
+
+    # SACHET redirects are rejected on purpose, so pooled requests must not follow them either.
+    _follow_redirects = False
 
     def __init__(self, feed_url: str, timeout_seconds: float = 12, transport: httpx.BaseTransport | None = None):
         self.feed_url = feed_url
+        self.base_url = ""
+        self._client = None
         self.timeout_seconds = timeout_seconds
         self.transport = transport
         parsed = urlparse(feed_url)
@@ -117,30 +123,29 @@ class SachetClient:
             headers["If-None-Match"] = etag
         checked_at = datetime.now(timezone.utc)
         try:
-            with httpx.Client(timeout=self.timeout_seconds, transport=self.transport, follow_redirects=False) as client:
-                with client.stream("GET", url, headers=headers) as response:
-                    if response.status_code == 304:
-                        return SachetDocument(304, None, response.headers.get("ETag", etag), checked_at)
-                    if response.status_code == 429:
-                        raise SachetProviderError("SACHET rate limit reached", "SACHET_RATE_LIMITED")
-                    if response.status_code in {401, 403}:
-                        raise SachetProviderError("SACHET denied the request", "SACHET_ACCESS_DENIED")
-                    if 300 <= response.status_code < 400:
-                        raise SachetProviderError("SACHET redirects are not followed", "SACHET_UNAVAILABLE")
-                    response.raise_for_status()
-                    maximum = 2_000_000 if url == self.feed_url else 1_000_000
-                    content_length = response.headers.get("Content-Length")
-                    if content_length and int(content_length) > maximum:
+            with self._get_client().stream("GET", url, headers=headers) as response:
+                if response.status_code == 304:
+                    return SachetDocument(304, None, response.headers.get("ETag", etag), checked_at)
+                if response.status_code == 429:
+                    raise SachetProviderError("SACHET rate limit reached", "SACHET_RATE_LIMITED")
+                if response.status_code in {401, 403}:
+                    raise SachetProviderError("SACHET denied the request", "SACHET_ACCESS_DENIED")
+                if 300 <= response.status_code < 400:
+                    raise SachetProviderError("SACHET redirects are not followed", "SACHET_UNAVAILABLE")
+                response.raise_for_status()
+                maximum = 2_000_000 if url == self.feed_url else 1_000_000
+                content_length = response.headers.get("Content-Length")
+                if content_length and int(content_length) > maximum:
+                    raise SachetProviderError("SACHET document exceeds the size limit", "SACHET_DOCUMENT_TOO_LARGE")
+                chunks = []
+                size = 0
+                for chunk in response.iter_bytes():
+                    size += len(chunk)
+                    if size > maximum:
                         raise SachetProviderError("SACHET document exceeds the size limit", "SACHET_DOCUMENT_TOO_LARGE")
-                    chunks = []
-                    size = 0
-                    for chunk in response.iter_bytes():
-                        size += len(chunk)
-                        if size > maximum:
-                            raise SachetProviderError("SACHET document exceeds the size limit", "SACHET_DOCUMENT_TOO_LARGE")
-                        chunks.append(chunk)
-                    body = b"".join(chunks).decode("utf-8-sig")
-                    return SachetDocument(200, body, response.headers.get("ETag"), checked_at)
+                    chunks.append(chunk)
+                body = b"".join(chunks).decode("utf-8-sig")
+                return SachetDocument(200, body, response.headers.get("ETag"), checked_at)
         except SachetProviderError:
             raise
         except (httpx.HTTPError, UnicodeError, ValueError) as exc:

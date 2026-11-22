@@ -6,17 +6,17 @@
 
 The website connects directly to **Open-Meteo** for current weather, hourly values, five-day forecasts, and CAMS air-quality model estimates across all **fifteen** configured Indian locations (`shared/regions.json`), shared with the FastAPI backend and ML pipeline. Responses are cached with explicit stale/error states and a single automatic timeout retry. Fixed fixtures remain only in software tests and are not displayed as live data. Optional FastAPI adapters add NDMA SACHET CAP warnings and CPCB station observations without mixing them into modelled indices. Static GitHub Pages weather connectivity does not imply a publicly hosted FastAPI backend, configured `DATA_GOV_IN_API_KEY` credential, promoted production ML service, or physical IoT device.
 
-## Seven website sections
+## Website sections
 
-- **Dashboard:** current weather and dual US/European AQI model estimates, explainable heat/pollution screening, upcoming heat/AQ signals, and separate optional SACHET/CPCB panels.
-- **Disaster Monitor:** detailed deterministic assessments and model trends, official CAP warnings when configured, station observations/history, and explicit flood/cyclone/lightning/drought coverage limits.
-- **Forecast:** a responsive five-day high/low chart, exact dates, freshness and source labels, daily cards, and a highlighted hottest model day.
-- **Risk Map:** selectable heat and modelled US/European AQI air-pollution layers across all fifteen locations, unavailable/stale marker states, and an offline India outline with no third-party tiles.
-- **Alerts:** official SACHET CAP warnings panel (when `VITE_API_BASE_URL` points to a deployed backend) kept separate from generated heat/AQ screening notices, with deduplication and explicit “not official warning delivery” labeling. No email, SMS, or background push service is claimed.
-- **Safety:** selected-location heat/AQ guidance plus sourced flood, cyclone, lightning, drought, official-agency, and emergency information.
-- **About:** implementation status and clear weather-model, station-observation, official-warning, AI/ML, backend, and sensor boundaries.
+The current app (`frontend/src/App.tsx`) routes five screens:
 
-The responsive interface supports mobile, tablet, desktop, keyboard operation, reduced motion, and legacy redirects. Region selection persists only in the current browser.
+- **Dashboard (`/`):** current weather and dual US/European AQI model estimates, explainable heat/pollution screening, early heat/AQ signals, the 24-hour day planner, the preparedness checklist, and a separate optional SACHET warning panel.
+- **Metric detail (`/metric/:metricId`):** Temperature, Heat Index, Humidity, UV Index, Air Quality, and Heat Risk views with hourly charts, tables, and Yesterday/Today/Tomorrow controls.
+- **AI Assistant (`/assistant`):** the chat screen, which fails closed with setup guidance when no backend `VITE_API_BASE_URL` or `ASSISTANT_API_KEY` is configured.
+- **Menu (`/menu`):** chat history and navigation.
+- **Profile (`/profile`):** units, language, alert types/lead time/quiet hours, and the device-location toggle.
+
+The earlier Disaster Monitor, Forecast, Risk Map, Alerts, Safety, and About screens are **not routed** in this branch; their source files remain in `frontend/src/pages/` but every old path redirects to the dashboard (`frontend/src/test/app.test.tsx` asserts this). The responsive interface supports mobile, tablet, desktop, keyboard operation, and reduced motion. Region selection persists only in the current browser.
 
 ## Heat-risk day planner (dashboard)
 
@@ -47,10 +47,14 @@ npm run dev
 ```
 
 ```bash
-npm test
+npm test          # unit tests
+npm run lint      # ESLint (TypeScript + React hooks rules)
+npx tsc -b        # strict type check
 npm run build
 npm audit
 ```
+
+From the repository root, `make help` lists the same commands (`make setup`, `make test`, `make lint`, `make build`) so contributors do not need to memorise the per-directory setup.
 
 Network-enabled verification (not expected to work in a restricted sandbox):
 
@@ -87,15 +91,17 @@ Optional official sources:
 - **CPCB through data.gov.in:** create an account and configure `DATA_GOV_IN_API_KEY` only on the backend for resource `3b01bcb8-0b14-4abf-b6f2-c1bfd384ba69`. The supplied Indian AQI is shown only when present; pollutant averages are never converted into AQI. Authentication/rate-limit/outage and stale-cache states are explicit. Because no `DATA_GOV_IN_API_KEY` is configured in public CI, live CPCB retrieval remains an operator-credential step while `503 CPCB_NOT_CONFIGURED` fail-closed behavior is verified. See `docs/MULTI_HAZARD_DEVELOPMENT.md` and `docs/DEPLOYMENT.md`.
 
 ```bash
-pytest backend/tests ml/tests firmware/tests -q
+pytest backend/tests ml/tests firmware/tests -q   # 130 tests
+cd frontend && npm test                          # 185 tests, 3 network-gated skips
 ```
 
-Automated unit tests (`90 passed`) use mocked HTTP transports and `source=simulated` sensor readings; live provider, PostgreSQL/PostGIS (`001`–`005`), and Playwright Chromium browser checks run in `.github/workflows/verify-integrations.yml` and `.github/workflows/verify-open-meteo.yml`.
+Automated unit tests use mocked HTTP transports and `source=simulated` sensor readings; live provider, PostgreSQL/PostGIS (`001`–`005`), and Playwright Chromium browser checks run in `.github/workflows/verify-integrations.yml` and `.github/workflows/verify-open-meteo.yml`.
 
 ## ML and firmware boundaries
 
 - Archive ingestion retrieves genuine Open-Meteo historical/reanalysis data only when run with provider network access; no real historical CSV is bundled. GitHub run `42579707328` retrieved **16,440 real daily rows** across all **15 configured locations** (`2023-01-01` to `2025-12-31`), evaluated Linear Regression, Random Forest, and Gradient Boosting chronologically on **3,285 holdout rows** (Gradient Boosting MAE **0.8759°C**, RMSE **1.2156°C**, R² **0.8782**), and verified FastAPI inference across all 15 regions plus 5 `model_inferred` hotspots. It remains an external, unpromoted CI artifact rather than a deployed prediction service.
 - Training compares Linear Regression, Random Forest, and Gradient Boosting using a no-shuffle chronological holdout and MAE/RMSE/R². Synthetic fixtures test the implementation only and are non-promotable.
+- Loading is gated on the artifact's own `promotion_eligible` flag, `dataset_type`, recorded ingestion failures, and dataset-hash match — an unpromotable pair is refused **before** `joblib.load` runs, so an unverified blob is never deserialised. `/api/v1/ml/status` reports `served`, `promotion_eligible`, and `status_detail` explaining any refusal.
 - Heat risk is deterministic NWS heat-index screening. ML hotspots are labelled `model_inferred`; no learned heat-risk classifier or observed hotspot detection is claimed.
 - ESP32 firmware requires local credentials, CA-validated HTTPS, NTP time, and valid DHT22 readings. Compilation, physical connectivity, and sensor accuracy are separate verification steps.
 - Safety recommendations are documented offline rules, not AI-generated medical advice. Suspected heatstroke requires emergency/professional help.

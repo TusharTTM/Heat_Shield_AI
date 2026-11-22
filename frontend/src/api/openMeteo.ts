@@ -384,13 +384,21 @@ function parseAirHourRange(payload: RawPayload, startIndex: number, count: numbe
   const hours: AirQualityHour[] = []
   times.slice(startIndex, startIndex + count).forEach((value, offset) => {
     const index = startIndex + offset
-    if (typeof value !== 'string') throw new WeatherApiError('Open-Meteo returned an invalid hourly air-quality timestamp.')
-    const values = Object.fromEntries(AIR_QUALITY_FIELDS.map(([property, field, min, max]) => [
-      property, optionalArrayNumber(hourly[field], index, min, max),
-    ])) as unknown as AirQualityValues
-    if (Object.values(values).every((reading) => reading === null)) return
+    // One malformed hour must not blank the whole series (the backend now
+    // treats the same case as a provider error). Skip the hour instead, so the
+    // remaining hours still render and the gap stays visible as a gap.
+    if (typeof value !== 'string') return
+    let values: AirQualityValues
+    try {
+      values = Object.fromEntries(AIR_QUALITY_FIELDS.map(([property, field, min, max]) => [
+        property, optionalArrayNumber(hourly[field], index, min, max),
+      ])) as unknown as AirQualityValues
+      if (Object.values(values).every((reading) => reading === null)) return
+    } catch {
+      return
+    }
     const localTime = toUtcDate(value)
-    if (!Number.isFinite(localTime.getTime())) throw new WeatherApiError('Open-Meteo returned an invalid hourly air-quality timestamp.')
+    if (!Number.isFinite(localTime.getTime())) return
     hours.push({
       ...values, modelTime: modelTimeToIso(value, payload.utc_offset_seconds),
       label: new Intl.DateTimeFormat('en-IN', { weekday: 'short', hour: 'numeric', timeZone: 'UTC' }).format(localTime),

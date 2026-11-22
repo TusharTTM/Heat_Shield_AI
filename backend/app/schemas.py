@@ -1,7 +1,15 @@
 from datetime import date, datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
+
+_CONTROL_LINE_BREAKS = "\r\n\x0b\x0c\x85\u2028\u2029"
+
+
+def _reject_line_breaks(value: str) -> str:
+    if any(character in value for character in _CONTROL_LINE_BREAKS):
+        raise ValueError("Line breaks are not allowed in assistant context fields.")
+    return value
 
 
 class RegionResponse(BaseModel):
@@ -11,7 +19,9 @@ class RegionResponse(BaseModel):
     latitude: float
     longitude: float
     elevation_m: float | int | None = None
-    coastal: bool = False
+    # shared/regions.json names this `is_coastal`; accept both so the API never
+    # reports a coastal city as inland just because the key name differs.
+    coastal: bool = Field(default=False, validation_alias=AliasChoices("coastal", "is_coastal"))
 
 
 class CurrentWeatherResponse(BaseModel):
@@ -355,6 +365,11 @@ class AssistantRegionRef(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     state: str = Field(min_length=1, max_length=120)
 
+    @field_validator("slug", "name", "state")
+    @classmethod
+    def single_line(cls, value: str) -> str:
+        return _reject_line_breaks(value)
+
 
 class AssistantContextItem(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -365,6 +380,16 @@ class AssistantContextItem(BaseModel):
     source: str = Field(min_length=1, max_length=200)
     observed_at: datetime | None = None
     freshness: Literal["current", "stale", "unknown"] = "unknown"
+
+    @field_validator("label", "value", "source")
+    @classmethod
+    def single_line(cls, value: str) -> str:
+        """Context rows render as one prompt line each; line breaks are rejected.
+
+        Without this, a cached provider payload could append its own
+        ``[OFFICIAL WARNING ...]`` row and be attributed to an official feed.
+        """
+        return _reject_line_breaks(value)
 
 
 class AssistantMessage(BaseModel):

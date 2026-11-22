@@ -278,10 +278,14 @@ def _alert_dict(alert: OfficialAlert, match: dict) -> dict:
 
 
 def _active_rows(db: Session, state: OfficialAlertFetch) -> tuple[list[OfficialAlert], int]:
-    rows = list(db.scalars(select(OfficialAlert)).all())
-    current_ids = set(state.current_identifiers or [])
-    rows = [row for row in rows if row.identifier in current_ids]
+    current_ids = list(dict.fromkeys(state.current_identifiers or []))
     superseded = set()
+    # Only rows still referenced by the current feed can be active. Loading the
+    # whole table grew with every CAP document ever stored; Cancel/Update rows
+    # must still be read here because they carry the supersede references.
+    rows: list[OfficialAlert] = []
+    if current_ids:
+        rows = list(db.scalars(select(OfficialAlert).where(OfficialAlert.identifier.in_(current_ids))).all())
     for row in rows:
         if row.status == "Actual" and row.msg_type in {"Cancel", "Update"}:
             superseded.update(filter(None, re.split(r"[\s,]+", row.references or "")))

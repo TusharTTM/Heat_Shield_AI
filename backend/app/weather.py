@@ -3,6 +3,8 @@ from typing import Any
 
 import httpx
 
+from .http_client import _ClientProvider
+
 
 SOURCE = "Open-Meteo"
 
@@ -64,20 +66,22 @@ def _number(payload: dict, key: str, low: float, high: float, required: bool = F
     return number
 
 
-class WeatherClient:
+class WeatherClient(_ClientProvider):
     """Open-Meteo client with explicit units and no client-side credentials."""
+
+    _follow_redirects = True
 
     def __init__(self, base_url: str, timeout_seconds: float = 10, transport: httpx.BaseTransport | None = None):
         self.base_url = base_url
         self.timeout_seconds = timeout_seconds
         self.transport = transport
+        self._client = None
 
     def _get(self, params: dict[str, Any]) -> dict:
         try:
-            with httpx.Client(timeout=self.timeout_seconds, transport=self.transport) as client:
-                response = client.get(self.base_url, params=params)
-                response.raise_for_status()
-                payload = response.json()
+            response = self._get_client().get(self.base_url, params=params)
+            response.raise_for_status()
+            payload = response.json()
         except (httpx.HTTPError, ValueError) as exc:
             raise WeatherProviderError("Weather provider request failed") from exc
         if not isinstance(payload, dict) or payload.get("error"):

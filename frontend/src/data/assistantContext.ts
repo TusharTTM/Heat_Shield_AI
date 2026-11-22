@@ -32,6 +32,21 @@ export interface AssistantContextInput {
   tempSymbol: string
 }
 
+// Mirrors backend/app/schemas.py AssistantContextItem limits. The backend
+// rejects line breaks in these fields (a newline could forge an extra
+// "[OFFICIAL WARNING]" row in the prompt), and official CAP text routinely
+// contains them, so normalise here rather than letting a legal alert fail.
+const LABEL_LIMIT = 120
+const VALUE_LIMIT = 400
+const SOURCE_LIMIT = 200
+const CONTEXT_LIMIT = 16
+const OFFICIAL_ALERT_LIMIT = 3
+
+function singleLine(text: string, limit: number): string {
+  const collapsed = text.replace(/\s+/g, ' ').trim()
+  return collapsed.length <= limit ? collapsed : `${collapsed.slice(0, limit - 1).trimEnd()}…`
+}
+
 function item(
   label: string,
   value: string,
@@ -40,13 +55,35 @@ function item(
   observedAt: string | null,
   freshness: AssistantFreshness,
 ): AssistantContextItem {
-  return { label, value, evidence_type: evidenceType, source, observed_at: observedAt, freshness }
+  return {
+    label: singleLine(label, LABEL_LIMIT),
+    value: singleLine(value, VALUE_LIMIT),
+    evidence_type: evidenceType,
+    source: singleLine(source, SOURCE_LIMIT),
+    observed_at: observedAt,
+    freshness,
+  }
 }
 
 function forecastLine(day: WeatherData['forecast'][number] | undefined, formatTemp: (c: number) => string, tempSymbol: string): string | null {
   if (!day) return null
   const range = `${formatTemp(day.max)}${tempSymbol} / ${formatTemp(day.min)}${tempSymbol}`
   return day.condition ? `${day.fullLabel}: ${range}, ${day.condition}` : `${day.fullLabel}: ${range}`
+}
+
+const EVIDENCE_PRIORITY: Record<AssistantContextItem['evidence_type'], number> = {
+  'official-warning': 0,
+  'weather-model': 1,
+  'air-quality-model': 2,
+  'app-state': 3,
+}
+
+function priority(contextItem: AssistantContextItem): number {
+  // The "omitted official warnings" notice is app-state evidence (it is not an
+  // official warning) but it qualifies the official list, so it must outrank
+  // ordinary app-state notes and survive the cap next to the warnings themselves.
+  if (contextItem.label === 'Official warnings omitted') return 0.5
+  return EVIDENCE_PRIORITY[contextItem.evidence_type] ?? 4
 }
 
 export function buildAssistantContext(input: AssistantContextInput): AssistantContextItem[] {
@@ -94,7 +131,15 @@ export function buildAssistantContext(input: AssistantContextInput): AssistantCo
   }
 
   if (official.status === 'ready' && official.data) {
-    const alerts = official.data.alerts.slice(0, 3)
+    const alerts = official.data.alerts.slice(0, OFFICIAL_ALERT_LIMIT)
+    if (official.data.alerts.length > alerts.length) {
+      // Never let a shortened list read like the complete official picture.
+      items.push(item(
+        'Official warnings omitted',
+        `Only the first ${alerts.length} of ${official.data.alerts.length} active official alerts are summarised here; the full list is on the app's official panel.`,
+        'app-state', APP_SOURCE, official.data.retrievedAt, 'unknown',
+      ))
+    }
     if (alerts.length === 0) {
       items.push(item(
         'Official government warnings',
@@ -129,5 +174,20 @@ export function buildAssistantContext(input: AssistantContextInput): AssistantCo
     ))
   }
 
-  return items.slice(0, 16)
+  if (items.length <= CONTEXT_LIMIT) return items
+  // Say so when the block is shortened instead of silently dropping conditions.
+  // Official warnings and model readings are safety-critical, so they survive the
+  // cap; a single notice reports exactly how many conditions were left out.
+  const byPriority = items
+    .map((contextItem, index) => ({ contextItem, index }))
+    .sort((a, b) => priority(a.contextItem) - priority(b.contextItem) || a.index - b.index)
+    .map(({ contextItem }) => contextItem)
+  const kept = byPriority.slice(0, CONTEXT_LIMIT - 1)
+  const omittedCount = items.length - kept.length
+  kept.push(item(
+    'Conditions omitted',
+    `${omittedCount} of ${items.length} conditions were omitted from this summary because of the request size limit. Ask about one metric at a time for detail.`,
+    'app-state', APP_SOURCE, null, 'unknown',
+  ))
+  return kept
 }

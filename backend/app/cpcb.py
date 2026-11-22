@@ -5,6 +5,7 @@ from zoneinfo import ZoneInfo
 
 import httpx
 
+from .http_client import _ClientProvider
 
 SOURCE = "Central Pollution Control Board via Open Government Data Platform India"
 RESOURCE_URL = "https://www.data.gov.in/catalog/real-time-air-quality-index"
@@ -82,14 +83,17 @@ def _observation_time(value: Any) -> datetime:
     return parsed.astimezone(timezone.utc)
 
 
-class CPCBClient:
+class CPCBClient(_ClientProvider):
     """Server-only OGD/CPCB client. It never derives missing Indian AQI from pollutant averages."""
+
+    _follow_redirects = False
 
     def __init__(self, base_url: str, api_key: str, timeout_seconds: float = 10, transport: httpx.BaseTransport | None = None):
         self.base_url = base_url
         self.api_key = api_key
         self.timeout_seconds = timeout_seconds
         self.transport = transport
+        self._client = None
 
     @property
     def configured(self) -> bool:
@@ -103,16 +107,15 @@ class CPCBClient:
             "filters[city]": CITY_FILTERS.get(region["slug"], region["name"]),
         }
         try:
-            with httpx.Client(timeout=self.timeout_seconds, transport=self.transport, follow_redirects=False) as client:
-                response = client.get(self.base_url, params=params)
-                if response.status_code in {401, 403}:
-                    raise CPCBAuthenticationError("data.gov.in rejected the configured API key")
-                if response.status_code == 429:
-                    raise CPCBRateLimitError("data.gov.in rate limit reached")
-                if 300 <= response.status_code < 400:
-                    raise CPCBProviderError("data.gov.in returned an unexpected redirect")
-                response.raise_for_status()
-                payload = response.json()
+            response = self._get_client().get(self.base_url, params=params)
+            if response.status_code in {401, 403}:
+                raise CPCBAuthenticationError("data.gov.in rejected the configured API key")
+            if response.status_code == 429:
+                raise CPCBRateLimitError("data.gov.in rate limit reached")
+            if 300 <= response.status_code < 400:
+                raise CPCBProviderError("data.gov.in returned an unexpected redirect")
+            response.raise_for_status()
+            payload = response.json()
         except CPCBProviderError:
             raise
         except httpx.HTTPStatusError as exc:

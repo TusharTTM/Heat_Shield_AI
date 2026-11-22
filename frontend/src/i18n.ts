@@ -93,7 +93,7 @@ const en = {
   'profile.earlyWarningsDesc': 'A heads-up before conditions deteriorate',
   'profile.leadTime': 'Alert lead time',
   'profile.leadTimeDesc': 'How far in advance to warn you',
-  'profile.leadOption': '{hours} hour{plural} ahead',
+  'profile.leadOption': '{hours} hours ahead',
   'profile.alertTypes': 'Alert types',
   'profile.quietHours': 'Quiet hours',
   'profile.quietHoursDesc': 'Mute alert sounds while you sleep',
@@ -491,7 +491,7 @@ const mr: Record<MessageKey, string> = {
   'dash.dailyPlanComplete': 'दैनंदिन योजना पूर्ण',
   'dash.percentComplete': '{percent}% पूर्ण',
   'dash.suggestionsEmpty': 'मोजमाप उपलब्ध असताना सूचना दिसतील.',
-  'dash.dashboardFor': '{city] साठी हीट शील्ड डॅशबोर्ड',
+  'dash.dashboardFor': '{city} साठी हीट शील्ड डॅशबोर्ड',
   'dash.officialFeedNote': 'स्थिर साइटवर अधिकृत सरकारी फीड जोडलेली नाही',
 
   'metric.temperature': 'तापमान',

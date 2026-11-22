@@ -367,3 +367,39 @@ def test_sachet_matches_when_rss_query_id_differs_from_cap_identifier_and_across
         assert second.json()["alerts"][0]["identifier"] == cap_id
         assert len(provider.feed_requests) == 2
         assert len(provider.cap_requests) == 1
+
+
+def test_place_matching_survives_multiword_names_and_does_not_match_substrings():
+    """Multi-word CAP area names must still match, and 'Mumbai' must not match 'Navi Mumbai'.
+
+    The matcher rebuilds a regex from re.escape(place); if the version of
+    re.escape stops escaping spaces, `South Mumbai` would silently stop
+    matching every multi-word area and only state-level matches would work.
+    """
+    from backend.app.sachet_service import _contains_place
+
+    assert _contains_place("South Mumbai district", "South Mumbai")
+    assert _contains_place("SOUTH-MUMBAI", "South Mumbai")
+    assert _contains_place("South  Mumbai", "South Mumbai")
+    assert _contains_place("Mumbai Suburban", "Mumbai")
+    assert _contains_place("Ahmadabad city", "Ahmadabad")
+    # Partial-word matches must not fire; the Navi Mumbai exclusion lives in the caller.
+    assert not _contains_place("Pune Rural", "Puni")
+    assert not _contains_place("Bengaluru", "Bengal")
+
+
+def test_mumbai_alert_naming_navi_mumbai_does_not_match_plain_mumbai():
+    """An alert scoped to Navi Mumbai must not be reported as a Mumbai match by text alone."""
+    from backend.app.regions import list_regions
+    from backend.app.sachet_service import match_alert_to_region
+
+    alert = OfficialAlert(
+        identifier="navi-1", sender="IMD", status="Actual", msg_type="Alert", scope="Public",
+        references="", areas=["Navi Mumbai, Maharashtra"], polygons=[], headline="Heavy rain over Navi Mumbai",
+        retrieved_at=datetime.now(timezone.utc), last_seen_in_feed_at=datetime.now(timezone.utc),
+        source_url="https://sachet.ndma.gov.in/cap_public_website/FetchXMLFile/1",
+    )
+    mumbai = next(region for region in list_regions() if region["slug"] == "mumbai")
+    navi = next(region for region in list_regions() if region["slug"] == "navi-mumbai")
+    assert match_alert_to_region(alert, mumbai) is None
+    assert match_alert_to_region(alert, navi) is not None

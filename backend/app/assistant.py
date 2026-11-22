@@ -10,6 +10,8 @@ from typing import Any
 
 import httpx
 
+from .http_client import build_timeout
+
 PROVIDER_NAME = "OpenAI-compatible chat completions"
 
 DISCLAIMER = (
@@ -49,23 +51,39 @@ class AssistantProviderError(RuntimeError):
     pass
 
 
+def _single_line(value: Any) -> str:
+    """Collapse any whitespace runs, including CR/LF, into single spaces.
+
+    Context values carry cached provider text and official CAP fields. Allowing
+    a line break would let a payload close the current ``- [LABEL] ...`` line and
+    forge a new one — for example a fake ``[OFFICIAL WARNING (government feed)]``
+    row or an extra instruction block — which is exactly the model-estimate /
+    official-warning separation this prompt exists to enforce.
+    """
+    return " ".join(str(value if value is not None else "").split())
+
+
 def render_context_block(region_name: str, region_state: str, context: list[dict[str, Any]]) -> str:
     """Render the app's conditions as an explicitly labelled block.
 
     Every line carries its evidence type, source and data time so the model can
-    attribute values and the reply can name its sources.
+    attribute values and the reply can name its sources. Every interpolated
+    field is forced onto a single line so a cached payload cannot forge labels.
     """
     lines = [
         "## Selected city (city level only)",
-        f"{region_name}, {region_state}",
+        f"{_single_line(region_name)}, {_single_line(region_state)}",
         "",
         "## Conditions available to the app",
     ]
     for item in context:
-        label = MODEL_LABELS.get(item["evidence_type"], "APP STATUS")
+        label = _single_line(MODEL_LABELS.get(item["evidence_type"], "APP STATUS"))
         freshness = FRESHNESS_LABELS.get(item.get("freshness", "unknown"), "freshness unknown")
-        observed = f", data time {item['observed_at']}" if item.get("observed_at") else ""
-        lines.append(f"- [{label}] {item['label']}: {item['value']} — source: {item['source']} ({freshness}){observed}")
+        observed = f", data time {_single_line(item['observed_at'])}" if item.get("observed_at") else ""
+        lines.append(
+            f"- [{label}] {_single_line(item['label'])}: {_single_line(item['value'])} — "
+            f"source: {_single_line(item['source'])} ({freshness}){observed}"
+        )
     return "\n".join(lines)
 
 
@@ -94,7 +112,7 @@ class AssistantClient:
         self.api_key = api_key
         self.max_output_tokens = max_output_tokens
         self._client = httpx.Client(
-            base_url=base_url.rstrip("/"), timeout=timeout_seconds, transport=transport,
+            base_url=base_url.rstrip("/"), timeout=build_timeout(timeout_seconds), transport=transport,
         )
 
     def chat(self, payload: dict[str, Any]) -> str:
