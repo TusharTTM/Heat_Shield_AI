@@ -204,6 +204,46 @@ describe('design system', () => {
     expect(sheet).toMatch(/overscroll-behavior:\s*contain/)
   })
 
+  it('keeps every touch control at or above the 44px floor', () => {
+    // ui-ux-pro-max priority 2 (Touch & Interaction): 44x44 minimum, and small
+    // screens must never shrink below it. Icon-only controls expand their hit
+    // area instead of their glyph, so the check accepts either width/height or
+    // min-height/min-width at 44 or more.
+    const CONTROL = /button|link|trigger|option|close|action|switch|pill|chip|row/
+    const offenders: string[] = []
+    for (const match of sheet.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      const selector = match[1].trim()
+      if (!CONTROL.test(selector)) continue
+      if (/\bsvg\b|thumb|loading-line/.test(selector)) continue
+      const body = match[2]
+      const minHeight = /min-height:\s*(\d+)px/.exec(body)
+      if (minHeight && Number(minHeight[1]) < 44) offenders.push(`${selector} min-height ${minHeight[1]}`)
+    }
+    expect(offenders).toEqual([])
+    // Adjacent icon rows keep at least the 8px gap the same rule requires.
+    for (const selector of ['.chat-history-actions', '.page-jump-links', '.dashboard-shortcuts']) {
+      const escaped = selector.replace(/\./g, '\\.')
+      expect(sheet, selector).toMatch(new RegExp(`${escaped}\\s*\\{[^}]*gap:\\s*var\\(--space-[2-9]`))
+    }
+  })
+
+  it('gives every hover fill a pressed state instead of relying on hover alone', () => {
+    // Touch devices never hover, so a control whose only feedback is :hover has
+    // no feedback at all there. Each of these had a bare hover style.
+    for (const selector of [
+      '.chat-history-action',
+      '.profile-button',
+      '.settings-switch',
+      '.profile-button.primary',
+      '.profile-button.danger',
+    ]) {
+      const escaped = selector.replace(/\./g, '\\.')
+      expect(sheet, selector).toMatch(new RegExp(`${escaped}[^{]*:active`))
+    }
+    // And hover-only tinting is dropped where it would stick to a tapped row.
+    expect(base).toMatch(/@media \(hover: none\)/)
+  })
+
   it('carries the check stamp on the first line', () => {
     expect(sheet.split('\n')[0]).toMatch(/^\/\* Hallmark ·/)
   })

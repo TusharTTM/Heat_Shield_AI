@@ -74,6 +74,26 @@ test('live weather fills the uploaded Dashboard and all three screens navigate',
   }
   expect(ringless).toEqual([])
 
+  // 2b. Rendered touch targets clear 44x44. A stylesheet check cannot see the
+  //     cascade, so this measures the real computed boxes.
+  const smallTargets = await page.evaluate(() => {
+    const out: string[] = []
+    // Buttons and styled controls only: an inline link inside a sentence is
+    // exempt by WCAG 2.2 (inline exception) and would fail this unfairly.
+    const controls = document.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), .dashboard-shortcut, .icon-text-button, .profile-button, .assistant-suggestion-chip, .settings-switch, .chat-history-action, .city-picker-trigger',
+    )
+    for (const node of controls) {
+      const box = node.getBoundingClientRect()
+      if (box.width === 0 && box.height === 0) continue // visually hidden
+      if (box.height < 44 - 0.5 || box.width < 44 - 0.5) {
+        out.push(`${node.tagName}.${node.className.toString().slice(0, 34)} ${Math.round(box.width)}x${Math.round(box.height)}`)
+      }
+    }
+    return out
+  })
+  expect(smallTargets).toEqual([])
+
   // 3. Nothing catches the pointer on a tap target for longer than a frame:
   //    touch-action must never be the default `auto` on a control.
   const autoTouch = await page.evaluate(() => [...document.querySelectorAll<HTMLElement>('a[href], button')]

@@ -45,3 +45,8 @@ test-results/
 
 # Hallmark design-skill scratch (screenshots, deal salt, lint records)
 .hallmark/
+
+# Agent skill caches. The reviewed skill sources under .agents/skills/ are
+# committed so the guidance is reproducible; these are what running them leaves.
+__pycache__/
+.agents/skills/**/__pycache__/

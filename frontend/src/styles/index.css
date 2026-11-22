@@ -155,7 +155,7 @@
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
-  min-height: 40px;
+  min-height: 44px;
   padding: var(--space-2) var(--space-5);
   border: 2px solid var(--ink);
   background: var(--plate);
@@ -197,7 +197,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  min-height: 40px;
+  min-height: 44px;
   padding: var(--space-2) var(--space-3);
   border: 2px solid var(--rule-2);
   background: var(--plate);
@@ -412,126 +412,24 @@ td {
    -> progress on every width; desktop places them with grid lines only.
    ========================================================================== */
 
-@media (min-width: 901px) {
-  .risk-scene-card { grid-column: 2; grid-row: 1; }
-}
 
 /* --- The 3D stage --------------------------------------------------------- */
 
-.risk-scene-card {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  border: 2px solid var(--ink);
-  background: var(--plate);
-}
 
-.risk-scene-top {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-3);
-  padding: var(--space-4) var(--space-5) var(--space-3);
-  border-bottom: var(--rule-hair) solid var(--rule);
-}
-.risk-scene-top h2 { font-size: var(--text-xl); }
-.risk-scene-top p { margin-top: var(--space-1); color: var(--muted); font-size: var(--text-sm); max-width: 60ch; }
 
-.risk-scene-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-4);
-  border-bottom: var(--rule-hair) solid var(--rule);
-  background: var(--paper-2);
-}
 
-.risk-scene-stage {
-  position: relative;
-  min-height: 400px;
-  background: var(--paper-2);
-  border-bottom: var(--rule-hair) solid var(--rule);
-}
-.risk-scene-canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
-.risk-scene-canvas:active { cursor: grabbing; }
-.risk-scene-canvas:focus-visible { outline-offset: -3px; }
 
-.risk-scene-hint {
-  position: absolute;
-  bottom: var(--space-2);
-  left: var(--space-2);
-  padding: var(--space-1) var(--space-2);
-  border: var(--rule-hair) solid var(--rule-2);
-  background: var(--plate);
-  color: var(--muted);
-  font-size: var(--text-xs);
-  max-width: 30ch;
-}
 
 /* Inspector: the one value that decided the colour. */
 /* In flow, directly under the stage. As an overlay it could escape the card on
  * narrow screens and sit over the data banner and page header. */
-.risk-scene-inspector {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--space-2) var(--space-5);
-  padding: var(--space-3) var(--space-5);
-  border-top: var(--rule-hair) solid var(--rule);
-  background: var(--paper-2);
-}
-.risk-scene-inspector-head { flex: 1 1 auto; display: flex; align-items: center; gap: var(--space-2); }
-.risk-scene-inspector-head .section-label { display: none; }
-.risk-scene-inspector-metric { flex: 1 1 auto; display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2); }
-.risk-scene-inspector-time { flex: 1 1 auto; text-align: right; }
-.risk-scene-inspector-head h3 { font-size: var(--text-base); }
 
-.risk-scene-inspector-metric strong {
-  font-family: var(--font-outlier);
-  font-size: var(--text-xl);
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-  color: var(--ink);
-}
-.risk-scene-inspector-metric span { color: var(--muted); font-size: var(--text-sm); }
-.risk-scene-inspector-time { color: var(--muted); font-size: var(--text-xs); }
 
 /* Legend: a ruled key, no coloured pills. */
-.risk-scene-legend {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2) var(--space-5);
-  padding: var(--space-3) var(--space-5);
-  border-bottom: var(--rule-hair) solid var(--rule);
-  color: var(--muted);
-  font-size: var(--text-sm);
-}
-.risk-scene-legend > span { display: inline-flex; align-items: center; gap: var(--space-2); }/* Unassessed is a hatched neutral, never a tinted "safe" colour. */
 
-.risk-scene-layer-group { display: inline-flex; border: 2px solid var(--rule-2); }
 
-.risk-scene-city-pills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1);
-  padding: var(--space-3) var(--space-5);
-}/* The city name is a label, not a monospace costume (gate 64). */
 
-.risk-scene-text-access { padding: 0 var(--space-5) var(--space-4); }
-.risk-scene-text-access > summary {
-  cursor: pointer;
-  color: var(--accent-text);
-  font-size: var(--text-sm);
-  font-weight: 500;
-  text-decoration: underline;
-  text-underline-offset: 0.18em;
-}
 
-.risk-scene-fallback { position: absolute; inset: 0; }
-.risk-scene-fallback-svg { width: 100%; height: 100%; }/* --- Task checklist ------------------------------------------------------- */
 /* Per-task explanation: ruled, indented to the label, never inside the label. */
 /* --- Preparedness progress ------------------------------------------------ */
 
@@ -546,7 +444,7 @@ td {
   align-items: center;
   gap: var(--space-2);
   max-width: 12rem;
-  min-height: 40px;
+  min-height: 44px;
   padding: var(--space-2) var(--space-3);
   border: var(--rule-hair) solid var(--rule-2);
   border-radius: var(--radius-pill);
@@ -610,8 +508,8 @@ td {
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   border: 0;
   border-radius: var(--radius-pill);
   background: var(--paper-2);
@@ -653,8 +551,8 @@ td {
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  width: 26px;
-  height: 26px;
+  width: 44px;
+  height: 44px;
   border: 0;
   border-radius: var(--radius-pill);
   background: none;
@@ -739,7 +637,6 @@ td {
    Official panels
    ========================================================================== */
 
-.official-sources-card { display: flex; flex-direction: column; }
 .official-loading { color: var(--muted); font-size: var(--text-sm); }
 .official-warning-lead { color: var(--ink-2); font-size: var(--text-base); max-width: 66ch; }
 .official-warning-empty {
@@ -798,41 +695,10 @@ td {
    Comprehension: scale guides, glossary, term help
    ========================================================================== */
 
-.risk-level-guide { margin-top: var(--space-6); }
-.risk-level-guide-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-4); padding-top: var(--space-3); border-top: var(--rule-bar) solid var(--ink); }.risk-threshold-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 0; border-top: var(--rule-bar) solid var(--ink); }
-.risk-threshold {
-  padding: var(--space-4);
-  border-right: var(--rule-hair) solid var(--rule);
-  background: var(--plate);
-  color: var(--ink-2);
-}
-.risk-threshold:last-child { border-right: 0; }
 /* The band's state is a rule on its top edge, not a coloured card. */
-.risk-threshold.risk-low { border-top: var(--rule-bar) solid var(--risk-low); }
-.risk-threshold.risk-moderate { border-top: var(--rule-bar) solid var(--risk-watch); }
-.risk-threshold.risk-high { border-top: var(--rule-bar) solid var(--risk-warning); }
-.risk-threshold.risk-extreme { border-top: var(--rule-bar) solid var(--risk-severe); }
-.risk-threshold h3 { font-size: var(--text-base); }
-.risk-threshold p { margin-top: var(--space-2); color: var(--muted); font-size: var(--text-sm); max-width: none; }
-.risk-range { font-family: var(--font-outlier); font-variant-numeric: tabular-nums; font-size: var(--text-lg); color: var(--ink); }
-.risk-action { margin-top: var(--space-2); color: var(--ink-2); font-size: var(--text-sm); }
-.risk-value { font-family: var(--font-display); font-size: var(--text-2xl); font-weight: 700; letter-spacing: var(--tracking-display); text-transform: uppercase; color: var(--ink); }
-.risk-subtitle { margin-top: var(--space-2); color: var(--muted); font-size: var(--text-sm); }
 
 /* Explanations: no leading stripe, no tint. A rule above carries the break. */
-.risk-explanation {
-  margin-top: var(--space-4);
-  padding: var(--space-4) 0 0;
-  border: 0;
-  border-top: var(--rule-hair) solid var(--rule);
-  background: none;
-  color: var(--ink-2);
-  font-size: var(--text-base);
-  max-width: 70ch;
-}
-.risk-basis { margin-top: var(--space-3); color: var(--muted); font-size: var(--text-sm); }
 .risk-calculation,
-.risk-method-copy { margin-top: var(--space-3); color: var(--ink-2); font-size: var(--text-sm); max-width: 72ch; }
 
 .plain-language-callout {
   padding: var(--space-4);
@@ -873,7 +739,7 @@ td {
 .term-help-close {
   display: grid;
   place-items: center;
-  width: 28px; height: 28px;
+  width: 44px; height: 44px;
   border: var(--rule-hair) solid var(--rule-2);
   background: none;
   color: var(--ink-2);
@@ -891,7 +757,7 @@ td {
    ========================================================================== */
 
 .page-jump-nav { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
-.page-jump-links { display: flex; flex-wrap: wrap; gap: var(--space-1); }
+.page-jump-links { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .page-jump-pill {
   display: inline-flex;
   align-items: center;
@@ -921,17 +787,10 @@ td {
   .brand { font-size: var(--text-base); }
 }
 
-@media (max-width: 900px) {
-  .risk-scene-stage { min-height: 300px; }
-}
 
 @media (max-width: 680px) {
   .page-content { padding: var(--space-6) var(--gutter) var(--space-10); }
   .page { gap: var(--space-6); }
-  .risk-scene-stage { min-height: 290px; }
-  .risk-scene-inspector { flex-direction: column; gap: var(--space-1); padding: var(--space-3) var(--space-4); }
-  .risk-scene-inspector-time { text-align: left; }
-  .risk-scene-toolbar { padding: var(--space-2); }
   /* Below the masthead, never over it: the panel opens under the header and
    * scrolls its own list, with the heading, search and count pinned. */
   .city-picker-popover {
@@ -990,6 +849,32 @@ td {
 /* Worst band for the period, on the heat-index detail view. */
 .metric-band-note { display: flex; align-items: center; gap: var(--space-2); color: var(--ink-2); font-size: var(--text-sm); }
 
+/* Press feedback for the controls that only had hover: a state layer at the
+ * micro duration, no layout change and no displacement of neighbours. */
+.chat-history-action:active,
+.chat-history-clear:active,
+.chat-history-action--danger:active { background: var(--rule); }
+
+.settings-switch:active { border-color: var(--accent); background: var(--plate-2); }
+
+.profile-button:active { border-color: var(--accent-text); background: var(--rule); }
+.profile-button.primary:active { background: var(--accent-deep); }
+.profile-button.ghost:active { background: var(--rule); }
+.profile-button.danger:active { border-color: var(--risk-severe-text); }
+
+.term-help-close:active,
+.city-picker-close:active,
+.hydration-toast-close:active { background: var(--rule); }
+
+/* Icon-only close controls: the hit area is 44px so it clears the touch floor,
+ * while the glyph stays at its drawn size. Inflating the glyph instead would
+ * make a dismiss control compete with the content it dismisses. */
+.city-picker-close svg,
+.term-help-close svg,
+.assistant-menu-close svg,
+.hydration-toast-close svg,
+.city-picker-search > button svg { width: 18px; height: 18px; }
+
 /* --- Uploaded Heat Shield dashboard -------------------------------------- */
 
 .dashboard-shell {
@@ -1026,8 +911,8 @@ td {
 /* Right-aligned so the location row balances the actions in the masthead
  * above it, rather than hanging off the left edge on its own. */
 .dashboard-location-row { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: var(--space-3); }
-.dashboard-location-row .city-picker-trigger { min-height: 40px; padding-inline: var(--space-4); font-weight: 600; }
-.dashboard-shell .city-picker-trigger { min-height: 42px; padding-inline: var(--space-4); border: 0; border-radius: var(--radius-pill); background: var(--plate); color: var(--plate-ink); font-weight: 600; }
+.dashboard-location-row .city-picker-trigger { min-height: 44px; padding-inline: var(--space-4); font-weight: 600; }
+.dashboard-shell .city-picker-trigger { min-height: 44px; padding-inline: var(--space-4); border: 0; border-radius: var(--radius-pill); background: var(--plate); color: var(--plate-ink); font-weight: 600; }
 .dashboard-shell .city-picker-trigger:hover { background: var(--plate-2); }
 .dashboard-shell .city-picker-popover { --ink: var(--dashboard-card-ink); --ink-2: var(--dashboard-card-ink-2); --muted: var(--dashboard-card-muted); --plate: var(--dashboard-card-hover); --plate-2: var(--dashboard-card); --rule: var(--dashboard-card-rule); color: var(--dashboard-card-ink); }
 .dashboard-shell .city-picker-search { color: var(--dashboard-card-ink); }
@@ -1260,7 +1145,7 @@ td {
     transform var(--dur-short) var(--ease-out),
     box-shadow var(--dur-short) var(--ease-out);
 }
-.assistant-back-link { width: 44px; padding: 0; }
+.assistant-back-link { width: 44px; min-height: 44px; padding: 0; }
 .assistant-menu-trigger { padding: 0 var(--space-4); }
 .assistant-back-link:hover,
 .assistant-menu-trigger:hover { background: var(--plate-2); border-color: var(--accent); }
@@ -1369,8 +1254,8 @@ td {
 .assistant-menu-close {
   display: grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border: 0;
   border-radius: var(--radius-pill);
   background: var(--paper-2);
@@ -1505,7 +1390,7 @@ td {
   .dashboard-profile { min-height: 32px; padding-inline: var(--space-3); }
   .dashboard-location-row { gap: var(--space-2); }
   .dashboard-location-row .city-picker { flex: 1 1 100%; }
-  .dashboard-location-row .city-picker-trigger { justify-content: space-between; width: 100%; min-height: 38px; font-size: var(--text-sm); }
+  .dashboard-location-row .city-picker-trigger { justify-content: space-between; width: 100%; min-height: 44px; font-size: var(--text-sm); }
   /* Full-bleed within the phone's gutters, but still anchored to the chip that
    * opened it: a fixed top offset sliced through the chip whenever the row
    * above it changed height. */
@@ -1536,8 +1421,8 @@ td {
   .uploaded-suggestion-copy small { font-size: 0.55rem; }
   .assistant-page,
   .menu-page { min-height: calc(100dvh - 48px); }
-  .assistant-back-link { width: 40px; min-height: 40px; }
-  .assistant-menu-trigger { min-height: 40px; padding-inline: var(--space-3); }
+  .assistant-back-link { width: 44px; min-height: 44px; }
+  .assistant-menu-trigger { min-height: 44px; padding-inline: var(--space-3); }
   .assistant-welcome { padding-bottom: 12vh; }
   .assistant-logo { width: 76px; height: 76px; }
   .assistant-logo svg { width: 42px; height: 42px; }
@@ -1833,7 +1718,7 @@ td {
   background: var(--paper-2);
 }
 .settings-segmented button {
-  min-height: 34px;
+  min-height: 44px;
   padding: 0 var(--space-3);
   border: 0;
   border-radius: var(--radius-pill);
@@ -1858,6 +1743,7 @@ td {
 .settings-check-list { display: flex; flex-direction: column; gap: var(--space-1); margin: var(--space-3) 0 0; padding: 0; list-style: none; }
 .settings-check-list label {
   display: flex;
+  min-height: 44px;
   align-items: flex-start;
   gap: var(--space-3);
   padding: var(--space-2);
@@ -1889,7 +1775,7 @@ td {
 
 .profile-button {
   display: inline-flex;
-  min-height: 40px;
+  min-height: 44px;
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
@@ -1957,8 +1843,8 @@ td {
 .hydration-toast-done:hover { background: var(--accent-text); }
 .hydration-toast-close {
   display: grid;
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   flex-shrink: 0;
   place-items: center;
   border: 0;
@@ -2197,10 +2083,10 @@ html[data-contrast='high'] {
 }
 .chat-history-item .chat-history-row { border: 0; background: transparent; }
 .chat-history-item .chat-history-row:hover { background: var(--plate-2); }
-.chat-history-actions { display: flex; align-items: center; gap: var(--space-1); padding: 0 var(--space-1) var(--space-1); }
+.chat-history-actions { display: flex; align-items: center; gap: var(--space-2); padding: 0 var(--space-1) var(--space-1); }
 .chat-history-action {
   display: inline-flex;
-  min-height: 28px;
+  min-height: 44px;
   align-items: center;
   gap: var(--space-1);
   padding: 0 var(--space-2);

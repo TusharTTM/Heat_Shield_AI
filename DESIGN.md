@@ -103,3 +103,15 @@ Two suites hold the machine-checkable half of it, so a rewrite fails a test inst
 - The avatar `<img>` carries no `width`/`height` attributes because the container is a fixed 72 px square with `object-fit: cover`; there is no layout shift to prevent.
 
 **Not verified here:** the guideline's rendered-page items (hover contrast, sticky-header occlusion, real focus-ring geometry) need a browser. CI's Chromium pass covers navigation, the picker and two viewports; the sandbox cannot download Chromium.
+
+## UI/UX Pro Max review
+
+A second pass used `ui-ux-pro-max` (`.agents/skills/ui-ux-pro-max`, installed from `nextlevelbuilder/ui-ux-pro-max-skill`), which scores interfaces against ten weighted categories — accessibility and touch first.
+
+**What it changed.** The audit found one systemic defect rather than a set of opinions: touch targets were sized for a mouse. Chat-history row actions were 28 px, the settings segmented control 34 px, five icon-only close buttons 26–36 px, and the primary button, icon-text button, profile button, city-picker trigger and settings rows sat at 38–42 px. Several mobile breakpoints then *shrank* already-small targets (`min-height: 40px` at narrow widths). Everything now clears 44 px, icon-only controls expand their hit area rather than their glyph, and adjacent icon rows moved from a 4 px gap to 8 px. Controls that had only a `:hover` style — chat actions, profile buttons, the settings switch — gained `:active` states, and hover tinting is dropped under `@media (hover: none)` where a tapped hover would stick.
+
+**What it removed.** The dead-CSS scan it motivated found a retired 3D risk scene and several removed components still shipping ~160 lines of rules: `risk-scene-*`, `risk-level-guide`, `risk-threshold`, `risk-method-copy`, `official-sources-card`. With two empty `@media` blocks, that is −164 lines against +50.
+
+**What it recommended and was refused.** `--design-system` returned a *light* palette (`#F8FAFC` canvas, `#1E40AF` primary), Fira Code / Fira Sans, and an enterprise gateway landing pattern. That conflicts with the Nightfall theme this project documents, with `tokens.css` as the single source of every colour, and with `contrast.test.ts`, which computes each pair in OKLab. The skill's own contract says to verify fit for the product and to treat results as recommendations, so the palette and typography were rejected; the touch, feedback and dead-code findings were kept. A dark-first emergency dashboard is also not a B2B gateway, and the recommended landing sections (client logos, contact sales) have no meaning here.
+
+**Guards.** `design-system.test.ts` now fails any control rule under 44 px, any icon row under an 8 px gap, and any hovered control without a pressed state; the live browser spec measures the real computed boxes, scoped to styled controls so inline prose links (a WCAG inline exception) are not penalised.

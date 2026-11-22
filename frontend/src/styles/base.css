@@ -47,6 +47,17 @@ body::before {
 
 a { color: inherit; text-decoration-thickness: 1px; text-underline-offset: 0.16em; }
 
+/* Hover is a promise of what a tap will do; on a touch screen the pointer never
+ * leaves, so a hover fill sticks to the last-tapped control. Hover-only
+ * decoration is therefore gated on a device that can actually hover; every
+ * hovered control also has a pressed state, so nothing is lost by dropping it. */
+@media (hover: none) {
+  .uploaded-tile:hover,
+  .dashboard-shortcut:hover,
+  .city-picker-option:hover,
+  .settings-check-list label:hover { background: inherit; border-color: inherit; }
+}
+
 /* Taps act immediately instead of waiting to see whether a double-tap zoom is
  * coming. The one exception is the risk scene, which opts into `none` itself. */
 a, button, input, select, textarea, summary, label { touch-action: manipulation; }
