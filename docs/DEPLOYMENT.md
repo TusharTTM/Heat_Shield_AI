@@ -4,6 +4,31 @@ No hosted FastAPI, managed database, trained-model service, or physical IoT depl
 
 ## 1. Public static frontend
 
+The live site is <https://tusharttm.github.io/Heat_Shield_AI/>. It is published by
+`.github/workflows/deploy-pages.yml` and **only that workflow can publish**: the
+`github-pages` environment has a branch policy allowing
+`arena/fcd541ac-heat-shield-ai` alone, so pushing any other branch deploys
+nothing.
+
+To release the current work:
+
+```bash
+git push origin HEAD:arena/fcd541ac-heat-shield-ai
+gh run watch "$(gh run list --workflow=deploy-pages.yml --limit 1 --json databaseId -q '.[0].databaseId')"
+```
+
+The workflow runs `npm test` and the `GITHUB_PAGES=true` build itself before
+publishing, so a red test blocks the deploy rather than shipping a broken site.
+`GITHUB_PAGES=true` sets Vite's `base` to `/Heat_Shield_AI/`; the routes are
+code-split, and Vite emits chunk URLs as relative `import("./X.js")` against
+the entry script, so they resolve under the Pages subpath — verified by serving
+`dist/` at `/Heat_Shield_AI/` and requesting every chunk.
+
+Deep links work through the `404.html` SPA fallback that the workflow copies
+from `index.html`. GitHub Pages answers a deep link with HTTP 404 while still
+rendering the app, which is expected; the app itself is fine.
+
+
 Requirements: GitHub Pages enabled for the repository's GitHub Actions source.
 
 ```bash
