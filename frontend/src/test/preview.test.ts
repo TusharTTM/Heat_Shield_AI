@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getDemoForecast, getDemoWeather, getRiskExplanation, getSafetyRecommendation, getSimpleRisk, getTodayHours, heatIndexC, riskFromHeatIndex, weatherByRegion } from '../data/preview'
+import { getDemoForecast, getDemoWeather, getRiskExplanation, getSafetyRecommendation, getSimpleRisk, getTodayHours, heatIndexC, riskFromHeatIndex, weatherByRegion } from './demoWeather'
 
 describe('fixed demo weather methods', () => {
   it('computes heat index from temperature and humidity', () => {

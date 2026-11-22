@@ -11,24 +11,10 @@ import { describe, expect, it } from 'vitest'
  * the reason, so the exception is visible in review.
  */
 const UNROUTED = new Set<string>([
-  // Retired screens kept only for history; every old path redirects to the
-  // dashboard. Delete these files (and this allowlist) when convenient.
-  'pages/About.tsx',
-  'pages/Alerts.tsx',
-  'pages/DisasterMonitor.tsx',
-  'pages/Forecast.tsx',
-  'pages/Maps.tsx',
-  'pages/NotFound.tsx',
-  'pages/Safety.tsx',
-  // Support components used only by the retired screens above.
-  'components/HazardCard.tsx',
-  'components/IndiaRiskScene3D.tsx',
-  'components/OfficialAlertsPanel.tsx',
-  'components/RegionMap.tsx',
-  // Dead since a dashboard redesign: the checklist and map-disclosure helpers
-  // are no longer rendered anywhere. Safe to delete with the files above.
-  'components/DashboardActionCards.tsx',
-  'components/HashDisclosureOpener.tsx',
+  // Empty on purpose. The retired screens and their support components were
+  // deleted, so any page or component without an importer is now a genuine
+  // mistake rather than accepted debt. To keep a knowingly-unrouted module,
+  // add it here with the reason.
 ])
 
 const modules = import.meta.glob(['../*.tsx', '../**/*.tsx', '../**/*.ts', '!../test/**', '!../**/*.test.*', '!../**/*.spec.*'], {

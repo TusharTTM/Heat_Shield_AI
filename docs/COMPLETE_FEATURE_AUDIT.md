@@ -170,7 +170,7 @@ Full commands and verification limits are in [`docs/DEPLOYMENT.md`](DEPLOYMENT.m
 
 | Layer | Verified result | Evidence boundary |
 |---|---|---|
-| Frontend unit/build | **215 passed, 3 network-gated skips** locally (re-measured on this branch) (all 3 live API/CAMS/archive tests passed in CI), strict TypeScript (`tsc -b`), Pages build, `git diff --check`, npm audit **0 vulnerabilities** | Unit/build evidence plus explicit non-production fixtures; live behavior is evidenced separately below. |
+| Frontend unit/build | **217 passed, 3 network-gated skips** locally (re-measured on this branch) (all 3 live API/CAMS/archive tests passed in CI), strict TypeScript (`tsc -b`), Pages build, `git diff --check`, npm audit **0 vulnerabilities** | Unit/build evidence plus explicit non-production fixtures; live behavior is evidenced separately below. |
 | Browser/UI | Five routed screens (earlier seven-section build), 15 locations, Heat + Air-pollution map layers, official-panel mocked Chromium suite (`42584079125` at `1440x1000` & `390x844`), and live Hosted Pages Chromium suite (`42584410097`) passed | Official-panel browser tests use mocked HTTP; manual assistive-technology and physical-device studies remain unverified. |
 | Python | **130/130 tests** locally on this branch; `ruff==0.11.8` and `pip check` pass | Includes explicit synthetic ML fixtures, mocked SACHET/CPCB transports, and simulated sensors. |
 | PostgreSQL/PostGIS & Compose | CI run `42584079125` (`postgres-migrations-and-compose`): `postgis/postgis:16-3.4`, migrations `001`–`005` applied twice, all 10 ORM tables & Compose FastAPI HTTP + simulated sensor deduplication verified | Ephemeral CI container evidence; managed production database, backups, and TLS remain external. |

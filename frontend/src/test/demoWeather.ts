@@ -1,10 +1,17 @@
+/**
+ * Demo weather fixtures.
+ *
+ * This lived in `src/data/` as if it were production data, but nothing in the
+ * app rendered it — the dashboard always reads Open-Meteo. It is only the
+ * sample series behind the software-test fixtures, so it now lives beside them.
+ */
 import type { ForecastDay, RegionWeather, TodayHour } from '../types'
-import { riskRecommendations } from './guidance'
-import { getSimpleRisk, heatIndexC, riskFromHeatIndex } from './heat'
-import { regions } from './regions'
+import { riskRecommendations } from '../data/guidance'
+import { getSimpleRisk, heatIndexC, riskFromHeatIndex } from '../data/heat'
+import { regions } from '../data/regions'
 
-export { regions } from './regions'
-export { getSimpleRisk, heatIndexC, riskFromHeatIndex } from './heat'
+export { regions } from '../data/regions'
+export { getSimpleRisk, heatIndexC, riskFromHeatIndex } from '../data/heat'
 
 export const DEMO_TIMESTAMP = '2026-05-15T09:30:00.000Z'
 export const DEMO_LABEL = 'Demo data'

@@ -1,5 +1,5 @@
 import { getRegion } from '../data/regions'
-import { weatherByRegion } from '../data/preview'
+import { weatherByRegion } from './demoWeather'
 import type { AirQualityData, AirQualityResult, CurrentWeatherResult, WeatherData, WeatherResult } from '../types'
 
 /** Explicit software test fixtures; never used by production API mode. */

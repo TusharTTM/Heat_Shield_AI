@@ -39,7 +39,9 @@ describe('unhappy-path states', () => {
   })
 
   it('gives every state container a visible border and padding', () => {
-    for (const selector of ['.weather-state', '.empty-state', '.empty-alert-state']) {
+    // `empty-alert-state` was only used by the retired Alerts page and its rule
+    // was removed with the component; these two are still rendered.
+    for (const selector of ['.weather-state', '.empty-state']) {
       const rule = new RegExp(`${selector.replace('.', '\\.')}[^{]*\\{([^}]*)\\}`).exec(sheet)
       expect(rule, `${selector} has no rule`).not.toBeNull()
       expect(rule![1]).toMatch(/border:/)

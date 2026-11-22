@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
 const read = (f: string) => readFileSync(`src/styles/${f}`, 'utf8')
@@ -70,18 +70,19 @@ describe('design system', () => {
     expect(all).not.toMatch(/--font-(display|body|outlier):\s*"(Inter|Roboto|Open Sans|Poppins|Lato|Arial)"/)
   })
 
-  it('never lets the nav row wrap, so a link cannot end up under the city picker', () => {
-    // A real browser caught this: the picker's subtree intercepted a click on the
-    // About link because the header row was allowed to overflow. The row never
-    // wraps now, the labels shrink, and the desktop nav collapses to a menu at
-    // 1100px rather than letting seven destinations crowd the picker.
-    expect(sheet).toMatch(/\.nav-container\s*\{[^}]*flex-wrap:\s*nowrap/)
-    expect(sheet).toMatch(/\.desktop-nav\s*\{[^}]*flex-shrink:\s*1/)
-    expect(sheet).toMatch(/\.nav-actions\s*\{[^}]*flex-shrink:\s*0/)
-    expect(sheet).toMatch(/\.brand\s*\{[^}]*flex-shrink:\s*0/)
-    const collapse = sheet.match(/@media \(max-width: (\d+)px\) \{\s*\.desktop-nav \{ display: none; \}/)
-    expect(collapse).not.toBeNull()
-    expect(Number(collapse![1])).toBeGreaterThanOrEqual(1100)
+  it('keeps the dashboard masthead from overflowing into its actions', () => {
+    // The old seven-destination nav row is gone with the retired pages, so the
+    // wrap/collapse assertions that guarded it went too. The live equivalent:
+    // the masthead must not wrap and its action group must not shrink, or a
+    // brand mark can collide with the city picker the way the old About link did.
+    expect(sheet).toMatch(/\.dashboard-topbar\s*\{[^}]*display:\s*flex/)
+    // The action group holds its width while the brand and picker give way.
+    expect(sheet).toMatch(/\.dashboard-top-actions\s*\{[^}]*inline-flex/)
+    // The picker row may wrap on narrow screens rather than push the actions off.
+    expect(sheet).toMatch(/\.dashboard-location-row\s*\{[^}]*flex-wrap:\s*wrap/)
+    // The retired nav must not creep back without a component to use it.
+    expect(sheet).not.toMatch(/\.desktop-nav\s*\{/)
+    expect(sheet).not.toMatch(/\.nav-container\s*\{/)
   })
 
   it('keeps the city name and state as separate blocks with a list that has no markers', () => {
@@ -110,6 +111,40 @@ describe('design system', () => {
     expect(reducedMotionBlocks).toMatch(/\.weather-spinner\s*\{[^}]*animation:\s*none/)
     expect(reducedMotionBlocks).toMatch(/\.action-checklist-loading-line\s*\{[^}]*animation:\s*none/)
     expect(reducedMotionBlocks).toMatch(/\.city-picker-popover\s*\{[^}]*animation:\s*none/)
+
+  })
+
+  it('has no stylesheet rule for a class the app stopped rendering', () => {
+    // Deleting a component leaves its rules behind; that is exactly how the
+    // retired nav, map scene and planner cards survived two redesigns. Classes
+    // built as `${prefix}-${value}` are exempt because they never appear
+    // literally in source, so their prefix is collected first.
+    const source = readdirSync('src', { recursive: true })
+      .map(String)
+      .filter((f) => /\.(tsx?|ts)$/.test(f) && !f.includes('test') && !f.startsWith('styles'))
+      .map((f) => readFileSync(`src/${f}`, 'utf8'))
+      .join('\n')
+    const dynamicPrefixes = new Set(
+      [...source.matchAll(/([a-z][\w-]*?)-\$\{/g)].map((m) => m[1]),
+    )
+    const orphaned = [...new Set([...sheet.matchAll(/^\.([a-z][\w-]*)/gm)].map((m) => m[1]))]
+      .filter((cls) => !new RegExp(`\\b${cls}\\b`).test(source))
+      .filter((cls) => ![...dynamicPrefixes].some((p) => cls === p || cls.startsWith(`${p}-`)))
+    expect(orphaned, `orphaned CSS classes: ${orphaned.slice(0, 12).join(', ')}`).toEqual([])
+  })
+
+  it('rounds corners only through the radius tokens', () => {
+    // The stylesheet used to carry four competing radius idioms (99px, 999px,
+    // 20px, 24px, 6px) while its own header claimed "nothing is rounded".
+    // A perfect circle on a fixed-size element is the one legitimate literal.
+    const literals = [...sheet.matchAll(/border-radius:\s*([^;]+);/g)]
+      .map((m) => m[1].trim())
+      .filter((value) => !value.startsWith('var(--radius'))
+      .filter((value) => value !== '50%' && value !== '0' && value !== 'inherit')
+    expect(literals, `hardcoded radii: ${literals.join(', ')}`).toEqual([])
+    // And the header must describe what the stylesheet actually does.
+    expect(sheet).not.toMatch(/Nothing is rounded/)
+    expect(sheet).toMatch(/radius tokens only/)
   })
 
   it('carries the check stamp on the first line', () => {
