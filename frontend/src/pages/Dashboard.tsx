@@ -24,11 +24,10 @@ import { useSettings } from '../context/SettingsContext'
 import { useWeather } from '../context/WeatherContext'
 import {
   buildDashboardSuggestions,
-  computePreparednessProgress,
   getIstDateKey,
   selectPrimaryRiskSummary,
 } from '../data/dashboardTasks'
-import { assessAirQuality, assessHeat, europeanAqiCategory, usAqiCategory } from '../data/hazards'
+import { assessAirQuality, assessHeat, europeanAqiCategory, SCREENING_LABELS, usAqiCategory } from '../data/hazards'
 import { getRegion } from '../data/regions'
 import { useLocalStorage } from '../hooks/useLocalStorage'
 import { useOfficialAlerts } from '../hooks/useOfficialData'
@@ -65,7 +64,6 @@ export default function Dashboard() {
   const storageScope = `${getIstDateKey()}:${region}`
   const [completionStore, setCompletionStore] = useLocalStorage<TaskCompletionStore>('hs-dashboard-tasks-v1', {})
   const completedIds = completionStore[storageScope] ?? []
-  const progress = useMemo(() => computePreparednessProgress(suggestions, completedIds), [completedIds, suggestions])
 
   const toggleTask = (taskId: string) => {
     setCompletionStore((previous) => {
@@ -91,13 +89,22 @@ export default function Dashboard() {
 
     <div className="dashboard-overview">
       <div className="dashboard-overview-copy">
-        <span className="dashboard-kicker">{t('dash.kicker')}</span>
-        <p>{t('dash.lead')} <span>{t('dash.tail')}</span></p>
+        <p>{t('dash.lead')}</p>
       </div>
       <div className="dashboard-location-row"><CityPicker /></div>
     </div>
 
     {(warning || airWarning) && <p className="dashboard-stale-note" role="status">{warning ?? airWarning}</p>}
+
+    {/* Urgent first. When an official warning is active it leads the page and
+        the model screening follows; when none is active the screening banner
+        is the top answer, because "no official warning" is not the same as
+        "nothing to do". Either way the two are never merged into one claim. */}
+    {latestOfficialAlert && (
+      <div id="official-warnings" className="dashboard-official-warnings is-urgent">
+        <OfficialAlertsPanel state={officialAlerts} />
+      </div>
+    )}
 
     <section
       id="situation-alert"
@@ -127,11 +134,20 @@ export default function Dashboard() {
       </div>
     </section>
 
-    <EarlyWarningsPanel />
-    <div id="official-warnings" className="dashboard-official-warnings">
-      <OfficialAlertsPanel state={officialAlerts} />
-    </div>
-    <DayPlanner />
+    {!latestOfficialAlert && (
+      <div id="official-warnings" className="dashboard-official-warnings">
+        <OfficialAlertsPanel state={officialAlerts} />
+      </div>
+    )}
+
+    <section className="upcoming-risk" aria-labelledby="upcoming-risk-title">
+      <div className="upcoming-risk-heading">
+        <span className="uploaded-eyebrow">{t('dash.upcoming')}</span>
+        <h2 id="upcoming-risk-title">{t('dash.upcomingTitle')}</h2>
+      </div>
+      <EarlyWarningsPanel />
+      <DayPlanner />
+    </section>
 
     <div className="dashboard-section-heading">
       <div><h2>{t('dash.conditions')}</h2></div>
@@ -152,56 +168,49 @@ export default function Dashboard() {
         to="/metric/air-quality"
         newTab
       />
-      <ActionCard icon={ShieldCheck} title={t('metric.heatRisk')} value={heat?.level ?? 'Unassessed'} detail={t('metric.heatScreening')} to="/metric/heat-risk" newTab />
-      <ActionCard
-        icon={FileText}
-        title={t('metric.reports')}
-        value={officialAlerts.status === 'ready' ? String(officialAlerts.data?.count ?? 0) : '—'}
-        detail={t('metric.officialWarnings')}
-        {...(officialAlerts.status === 'ready' ? { to: '#official-warnings', label: `Open the ${officialAlerts.data?.count ?? 0} official warning matches` } : {})}
-      />
-      <ActionCard icon={MessageCircle} title={t('metric.assistant')} value={t('metric.open')} detail={t('metric.ask')} to="/assistant" />
     </section>
 
-    <div className="uploaded-dashboard-lower-grid">
-      <section className="uploaded-panel" aria-labelledby="dashboard-suggestions-title">
-        <div className="uploaded-panel-heading">
-          <div>
-            <span className="uploaded-eyebrow">{t('dash.suggestionsKicker')}</span>
-            <h2 id="dashboard-suggestions-title">{t('dash.suggestionsTitle')}</h2>
-          </div>
-        </div>
-        {suggestions.length > 0 ? <ul className="uploaded-suggestion-list" aria-label={`Suggested precautions for ${selected.name}`}>
-          {suggestions.slice(0, 3).map((task) => {
-            const completed = completedIds.includes(task.id)
-            return <li key={task.id} className={completed ? 'completed' : ''}>
-              <label>
-                <input type="checkbox" checked={completed} onChange={() => toggleTask(task.id)} />
-                <span className="uploaded-checkmark" aria-hidden="true"><Check size={14} /></span>
-                <span className="uploaded-suggestion-copy">
-                  <span className="uploaded-suggestion-title">{task.title}</span>
-                  <small>{task.level ? `${task.level[0].toUpperCase()}${task.level.slice(1)} screening` : 'Unassessed'}</small>
-                </span>
-              </label>
-            </li>
-          })}
-        </ul> : <p className="uploaded-empty-copy">{t('dash.suggestionsEmpty')}</p>}
-      </section>
+    {/* Navigation, not readings: kept out of the weather grid so the tiles
+        above stay a single glanceable set of measurements. */}
+    <nav className="dashboard-shortcuts" aria-label={t('dash.shortcuts')}>
+      <Link to="/assistant" className="dashboard-shortcut">
+        <MessageCircle size={18} aria-hidden="true" />
+        <span>{t('metric.assistant')}</span>
+        <small>{t('metric.ask')}</small>
+      </Link>
+      {officialAlerts.status === 'ready' && (
+        <a href="#official-warnings" className="dashboard-shortcut">
+          <FileText size={18} aria-hidden="true" />
+          <span>{t('metric.officialWarnings')}</span>
+          <small>{officialAlerts.data?.count ?? 0}</small>
+        </a>
+      )}
+    </nav>
 
-      <section className="uploaded-panel mission-panel" aria-labelledby="dashboard-progress-title">
-        <div className="uploaded-panel-heading">
-          <div>
-            <span className="uploaded-eyebrow">{t('dash.progressKicker')}</span>
-            <h2 id="dashboard-progress-title">{t('dash.progressTitle')}</h2>
-          </div>
+    <section className="uploaded-panel" aria-labelledby="dashboard-suggestions-title">
+      <div className="uploaded-panel-heading">
+        <div>
+          <span className="uploaded-eyebrow">{t('dash.suggestionsKicker')}</span>
+          <h2 id="dashboard-suggestions-title">{t('dash.suggestionsTitle')}</h2>
         </div>
-        <div className="mission-progress-copy">
-          <strong>{progress.completedCount}<span>/{progress.totalCount}</span></strong>
-          <p>{progress.completedCount === progress.totalCount && progress.totalCount > 0 ? t('dash.dailyPlanComplete') : t('dash.precautionsCompleted')}</p>
-        </div>
-        <progress value={progress.percent} max={100} aria-label={`Heat mission progress: ${progress.percent}%`} />
-      </section>
-    </div>
+      </div>
+      {suggestions.length > 0 ? <ul className="uploaded-suggestion-list" aria-label={`Suggested precautions for ${selected.name}`}>
+        {suggestions.slice(0, 3).map((task) => {
+          const completed = completedIds.includes(task.id)
+          return <li key={task.id} className={completed ? 'completed' : ''}>
+            <label>
+              <input type="checkbox" checked={completed} onChange={() => toggleTask(task.id)} />
+              <span className="uploaded-checkmark" aria-hidden="true"><Check size={14} /></span>
+              <span className="uploaded-suggestion-copy">
+                <span className="uploaded-suggestion-title">{task.title}</span>
+                <small>{task.level ? `${task.level[0].toUpperCase()}${task.level.slice(1)} screening` : 'Unassessed'}</small>
+              </span>
+            </label>
+          </li>
+        })}
+      </ul> : <p className="uploaded-empty-copy">{t('dash.suggestionsEmpty')}</p>}
+    </section>
+
   </div>
 }
 
@@ -228,10 +237,12 @@ function MetricCard({
   /** Overrides the generated link name when `to` is an in-page anchor. */
   label?: string
 }) {
+  const t = useT()
   const content = <>
     <h2 className="uploaded-tile-heading"><Icon size={17} aria-hidden="true" /><span>{title}</span></h2>
     <strong className={`uploaded-tile-value${value === '—' ? ' uploaded-tile-value--empty' : ''}`}>{value}{unit && <small>{unit}</small>}</strong>
     <span className="uploaded-tile-detail">{detail}</span>
+    {risk && <span className="uploaded-tile-risk">{t('screening.level', { level: SCREENING_LABELS[risk] })}</span>}
   </>
 
   if (to) {
@@ -247,38 +258,4 @@ function MetricCard({
     </Link>
   }
   return <article className={`uploaded-tile weather-card${risk ? ` risk-${risk}` : ''}`}>{content}</article>
-}
-
-function ActionCard({
-  icon: Icon,
-  title,
-  value,
-  detail,
-  to,
-  newTab = false,
-  label,
-}: {
-  icon: LucideIcon
-  title: string
-  value: string
-  detail: string
-  to?: string
-  newTab?: boolean
-  /** Overrides the generated link name when `to` is an in-page anchor. */
-  label?: string
-}) {
-  const content = <>
-    <h2 className="uploaded-tile-heading"><Icon size={17} aria-hidden="true" /><span>{title}</span></h2>
-    <strong className={`uploaded-action-value${value === '—' ? ' uploaded-action-value--empty' : ''}`}>{value}</strong>
-    <span className="uploaded-tile-detail">{detail}</span>
-  </>
-
-  return to
-    ? <Link
-      to={to}
-      target={newTab ? '_blank' : undefined}
-      className="uploaded-tile uploaded-action-tile"
-      aria-label={label ?? (newTab ? `${title} — open detail view in a new tab` : undefined)}
-    >{content}</Link>
-    : <article className="uploaded-tile uploaded-action-tile">{content}</article>
 }

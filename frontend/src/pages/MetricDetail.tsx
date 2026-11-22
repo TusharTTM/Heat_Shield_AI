@@ -3,7 +3,7 @@ import { ArrowLeft, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react'
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom'
 import { getHistoricalWeather } from '../api/openMeteo'
 import { MetricChart, formatPointValue } from '../components/MetricChart'
-import { formatWeatherTime } from '../components/ui'
+import { RiskBadge, formatWeatherTime } from '../components/ui'
 import { useApp } from '../context/AppContext'
 import { useSettings } from '../context/SettingsContext'
 import { useWeather } from '../context/WeatherContext'
@@ -107,6 +107,13 @@ export default function MetricDetail() {
       </div>
     }
     return <>
+      {view.band && (
+        <p className="metric-band-note">
+          <RiskBadge level={view.band.worst} subtle />
+          <span>{t('detail.bandWorst', { level: view.band.worst[0].toUpperCase() + view.band.worst.slice(1) })}</span>
+        </p>
+      )}
+
       <ul className="metric-summary-row" aria-label={t('detail.summary')}>
         {view.summary.current !== null && view.summary.currentLabel && (
           <li><span>{t('detail.current')}</span><strong>{formatPointValue(view.summary.current, view.unitLabel, digits)}</strong><small>{view.summary.currentLabel}</small></li>
@@ -133,7 +140,7 @@ export default function MetricDetail() {
         <summary>{t('detail.hourlyTable')}</summary>
         <div className="table-scroll">
           <table>
-            <caption>{view.source} · modelled estimates</caption>
+            <caption>{t('detail.hourlyTable')}</caption>
             <thead>
               <tr>
                 <th scope="col">{t('detail.hour')}</th>
@@ -157,6 +164,10 @@ export default function MetricDetail() {
         <p>{definition.whatItMeans}</p>
         <h2>{t('detail.safetyGuidance')}</h2>
         <p>{definition.safetyGuidance}</p>
+        {metricId === 'heat-index' && <>
+          <h2>{t('detail.dangerTitle')}</h2>
+          <p>{t('detail.dangerBody')}</p>
+        </>}
       </section>
     </>
   })()
@@ -207,16 +218,5 @@ export default function MetricDetail() {
         <p className="day-planner-caveat">Modelled values — not official warnings, not station observations, not medical advice.</p>
       </footer>
     )}
-
-    <nav className="metric-detail-metrics" aria-label={t('detail.metrics')}>
-      <Link to={`/metric/${previous}?day=${day}`} className="icon-text-button" aria-label={t('detail.previousMetric', { metric: t(METRIC_TITLE_KEY[previous]) })}>
-        <ChevronLeft size={14} aria-hidden="true" />
-        <span>{t(METRIC_TITLE_KEY[previous])}</span>
-      </Link>
-      <Link to={`/metric/${next}?day=${day}`} className="icon-text-button" aria-label={t('detail.nextMetric', { metric: t(METRIC_TITLE_KEY[next]) })}>
-        <span>{t(METRIC_TITLE_KEY[next])}</span>
-        <ChevronRight size={14} aria-hidden="true" />
-      </Link>
-    </nav>
   </section>
 }

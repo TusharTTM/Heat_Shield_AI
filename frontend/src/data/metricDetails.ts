@@ -16,10 +16,10 @@ import type { MessageKey } from '../i18n'
 import { riskFromEuropeanAqi, riskFromUsAqi, usAqiCategory } from './hazards'
 import { getSimpleRisk, heatIndexC, riskFromHeatIndex } from './heat'
 
-export type MetricId = 'temperature' | 'heat-index' | 'humidity' | 'uv-index' | 'air-quality' | 'heat-risk'
+export type MetricId = 'temperature' | 'heat-index' | 'humidity' | 'uv-index' | 'air-quality'
 export type DayId = 'yesterday' | 'today' | 'tomorrow'
 
-export const METRIC_ORDER: MetricId[] = ['temperature', 'heat-index', 'humidity', 'uv-index', 'air-quality', 'heat-risk']
+export const METRIC_ORDER: MetricId[] = ['temperature', 'heat-index', 'humidity', 'uv-index', 'air-quality']
 
 export const DAY_ORDER: DayId[] = ['yesterday', 'today', 'tomorrow']
 
@@ -30,7 +30,6 @@ export const METRIC_TITLE_KEYS: Record<MetricId, MessageKey> = {
   humidity: 'metric.humidity',
   'uv-index': 'metric.uvIndex',
   'air-quality': 'metric.airQuality',
-  'heat-risk': 'metric.heatRisk',
 }
 
 /** i18n day labels — shared by the date tabs and document titles. */
@@ -94,13 +93,6 @@ export const METRIC_DEFINITIONS: Record<MetricId, MetricDefinition> = {
     whatItMeans: 'The US Air Quality Index (0–500) estimated by the CAMS atmospheric model via the Open-Meteo Air Quality API. Modelled grid estimates, not physical CPCB ground-station readings.',
     safetyGuidance: 'Higher AQI values mean more pollution. People with asthma or heart conditions, children, and older adults should limit prolonged outdoor exertion when AQI is in the unhealthy ranges, and consider a well-fitted mask on very poor days.',
   },
-  'heat-risk': {
-    id: 'heat-risk',
-    chartLabel: 'Heat index (screening)',
-    unit: 'temperature',
-    whatItMeans: 'HeatShield’s screening band derived from the modelled shade heat index: low, moderate, high, or extreme. The chart plots the heat index itself; the tooltip and table show the band for each hour.',
-    safetyGuidance: 'This is a screening signal, not an official warning or medical advice. In high or extreme bands, reschedule outdoor plans to cooler hours and watch for heat-illness symptoms.',
-  },
 }
 
 export interface MetricPointView {
@@ -131,6 +123,12 @@ export interface MetricDayView {
   hasData: boolean
   gapCount: number
   summary: MetricSummary
+  /**
+   * Screening band for a derived risk series (heat index only). The retired
+   * heat-risk page plotted this; it belongs here because it is a property of
+   * the heat index, not a separate reading.
+   */
+  band: { worst: SimpleRiskLevel } | null
   source: string
   updatedAt: string | null
   unavailableReason: string | null
@@ -214,7 +212,7 @@ function heatIndexPoint(point: MetricHourPoint): { value: number | null; risk: S
 }
 
 function noteForWeatherPoint(metric: MetricId, point: MetricHourPoint, value: number | null, format: ValueFormat): string | null {
-  if (metric === 'heat-risk' || metric === 'heat-index') {
+  if (metric === 'heat-index') {
     const { risk } = heatIndexPoint(point)
     return risk ? `${risk[0].toUpperCase()}${risk.slice(1)} screening` : 'Not screened (humidity missing)'
   }
@@ -253,15 +251,12 @@ function summarize(points: MetricPointView[], day: DayId, metric: MetricId, form
       const uvValues = points.map((point) => point.value).filter((value): value is number => value !== null)
       current = uvValues.length > 0 ? Math.max(...uvValues) : null
       currentLabel = current === null ? null : 'Highest forecast today'
-    } else if (sources.weather && metric !== 'heat-risk') {
+    } else if (sources.weather) {
       const raw = metric === 'temperature' ? sources.weather.temperature
         : metric === 'heat-index' ? sources.weather.heatIndex
           : sources.weather.humidity
       current = raw === null || metric === 'humidity' ? raw : displayValue(definition, raw, format)
       currentLabel = current === null ? null : 'Current model value'
-    } else if (metric === 'heat-risk' && sources.weather) {
-      current = sources.weather.heatIndex === null ? null : displayValue(METRIC_DEFINITIONS[metric], sources.weather.heatIndex, format)
-      currentLabel = current === null ? null : 'Current heat index'
     }
   }
   return {
@@ -320,7 +315,7 @@ export function buildMetricDay(
     : weatherPoints.map((point) => {
       let raw: number | null
       let risk: SimpleRiskLevel | null = null
-      if (metric === 'heat-index' || metric === 'heat-risk') {
+      if (metric === 'heat-index') {
         const screened = heatIndexPoint(point)
         raw = screened.value
         risk = screened.risk
@@ -347,6 +342,12 @@ export function buildMetricDay(
         : 'The connected data source provides no hourly readings for this metric and date. This is unknown — not an all-clear.'
     : null
 
+  const levels = points.map((point) => point.risk).filter((level): level is SimpleRiskLevel => level !== null)
+  const rank: Record<SimpleRiskLevel, number> = { low: 0, moderate: 1, high: 2, extreme: 3 }
+  const band = metric === 'heat-index' && levels.length > 0
+    ? { worst: levels.reduce((worst, level) => (rank[level] > rank[worst] ? level : worst), levels[0]) }
+    : null
+
   return {
     metric,
     day,
@@ -354,6 +355,7 @@ export function buildMetricDay(
     points,
     hasData,
     gapCount,
+    band,
     summary: hasData ? summarize(points, day, metric, format, sources) : { min: null, max: null, current: null, currentLabel: null, rangeLabel: day === 'yesterday' ? 'Historical reanalysis' : day === 'today' ? 'Today (modelled hours)' : 'Full-day forecast' },
     source: sourceLabel,
     updatedAt,

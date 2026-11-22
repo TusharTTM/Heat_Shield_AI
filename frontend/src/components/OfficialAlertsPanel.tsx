@@ -23,13 +23,12 @@ export function OfficialAlertsPanel({ state }: { state: OfficialSourceState<Offi
   return <Card className="official-warning-card official-cap-panel">
     <CardHeader title="Official government warnings" subtitle="NDMA SACHET CAP, kept separate from model screening" icon={<ShieldAlert size={22} aria-hidden="true" />} action={<TermHelp definition={GLOSSARY_TERMS.cap} label="What is CAP?" />} />
     {state.status === 'unconfigured' && <div className="official-warning-empty">
-      <strong>Official CAP backend not configured</strong>
+      <strong>Official warnings are not being retrieved right now</strong>
       <p className="official-warning-lead"><strong>An empty panel here never means your area has no warnings.</strong> Check India’s official portal directly.</p>
       <a className="button button-secondary" href="https://sachet.ndma.gov.in/" rel="external">Open NDMA SACHET <ExternalLink size={15} aria-hidden="true" /></a>
       <details className="official-why-drawer">
-        <summary>Why official warnings are unavailable here, and what would fix it</summary>
-        <div className="plain-language-callout"><strong>For visitors:</strong> Live government disaster alerts require a backend server and cannot run directly inside this static website.</div>
-        <p className="operator-detail-note"><span className="operator-detail-tag">Technical &amp; self-hosting detail:</span> GitHub Pages cannot run the Python CAP client. Configure <code>VITE_API_BASE_URL</code> to a deployed FastAPI backend to retrieve SACHET alerts.</p>
+        <summary>Why this panel is empty</summary>
+        <div className="plain-language-callout">Live government alerts need a server connection that this public site does not have. This says nothing about whether warnings exist for your area — check the NDMA SACHET portal before you travel.</div>
       </details>
     </div>}
     {state.status === 'loading' && <p className="official-loading" role="status"><BellRing size={19} aria-hidden="true" />Retrieving and validating official CAP messages…</p>}

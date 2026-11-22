@@ -157,7 +157,7 @@ export function buildAssistantContext(input: AssistantContextInput): AssistantCo
   } else if (official.status === 'unconfigured') {
     items.push(item(
       'Official government warnings',
-      'Government feed not connected on this static site — no official alert list is available. Absence of alerts is not an all-clear.',
+      'Official warnings are not being retrieved right now, so no official alert list is available. Absence of alerts is not an all-clear.',
       'app-state', APP_SOURCE, null, 'unknown',
     ))
   } else if (official.status === 'error') {

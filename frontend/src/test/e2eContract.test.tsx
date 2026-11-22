@@ -53,7 +53,8 @@ describe('e2e/official-sources.spec.ts selectors', () => {
 
     expect(await screen.findByRole('heading', { name: 'Heat Shield dashboard for Mumbai' })).toBeInTheDocument()
     expect(document.querySelectorAll('.key-readings-grid .weather-card')).toHaveLength(5)
-    expect(document.querySelectorAll('.key-readings-grid .uploaded-action-tile')).toHaveLength(3)
+    expect(document.querySelectorAll('.key-readings-grid .uploaded-action-tile')).toHaveLength(0)
+    expect(document.querySelectorAll('.dashboard-shortcuts a')).toHaveLength(1)
     expect(screen.getByRole('heading', { name: 'AI suggestions' })).toBeInTheDocument()
 
     await user.click(screen.getByRole('link', { name: /AI Assistant/ }))

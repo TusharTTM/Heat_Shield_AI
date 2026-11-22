@@ -8,7 +8,9 @@ test('the uploaded screens work on mobile with unavailable weather services', as
   await page.goto('./')
   await expect(page.getByRole('heading', { name: 'Heat Shield dashboard for Mumbai' })).toBeVisible()
   await expect(page.locator('.key-readings-grid .weather-card')).toHaveCount(5)
-  await expect(page.locator('.key-readings-grid .uploaded-action-tile')).toHaveCount(3)
+  // Shortcuts moved out of the readings grid: it is measurements only now.
+  await expect(page.locator('.key-readings-grid .uploaded-action-tile')).toHaveCount(0)
+  await expect(page.locator('.dashboard-shortcuts a')).toHaveCount(1)
   await expect(page.getByRole('heading', { name: 'AI suggestions' })).toBeVisible()
 
   await page.getByRole('link', { name: /AI Assistant/ }).click()

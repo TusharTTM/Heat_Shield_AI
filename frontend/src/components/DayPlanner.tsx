@@ -100,7 +100,7 @@ export function DayPlanner() {
       )}
 
       <div className="day-planner-windows">
-        <h3>{t('plan.lowerHeading')}</h3>
+        <h4>{t('plan.lowerHeading')}</h4>
         {plan.lowerWindows.length > 0
           ? <ul className="day-planner-window-list">
             {plan.lowerWindows.map((window) => <li key={`${window.startLabel}-${window.endLabel}`}>
@@ -112,12 +112,12 @@ export function DayPlanner() {
           </ul>
           : <p className="day-planner-note">{t('plan.lowerNone')}</p>}
         {plan.lowerWindows.length > 0 && (
-          <p className="day-planner-caveat">Comparative only — a lower-heat window is not a safe period.</p>
+          <p className="day-planner-caveat">{t('plan.lowerCaveat')}</p>
         )}
       </div>
 
       <div className="day-planner-compare">
-        <h3>{t('plan.compareHeading')}</h3>
+        <h4>{t('plan.compareHeading')}</h4>
         <ul className="day-planner-blocks">
           {plan.blocks.map((block) => <li key={block.rangeLabel} className={`day-planner-block is-${block.kind}`}>
             <strong>{block.rangeLabel}</strong>
@@ -130,11 +130,10 @@ export function DayPlanner() {
     </>
   })()
 
-  return <section className="early-warnings day-planner" aria-labelledby="day-planner-title">
+  return <div className="early-warnings day-planner" role="group" aria-labelledby="day-planner-title">
     <div className="early-warnings-heading">
       <div>
-        <span className="uploaded-eyebrow"><Sunrise size={14} aria-hidden="true" />{t('plan.kicker')}</span>
-        <h2 id="day-planner-title">{t('plan.title', { city: selected.name })}</h2>
+        <h3 id="day-planner-title">{t('plan.title', { city: selected.name })}</h3>
       </div>
     </div>
 
@@ -152,5 +151,5 @@ export function DayPlanner() {
         <span className="day-planner-caveat">Modelled values, not official warnings, station readings, or medical advice.</span>
       </p>
     )}
-  </section>
+  </div>
 }

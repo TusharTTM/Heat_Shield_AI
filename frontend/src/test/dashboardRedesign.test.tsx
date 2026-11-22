@@ -9,7 +9,6 @@ import { getAirQuality, getWeather } from '../api/openMeteo'
 import { airQualityResult, weatherResult } from './weatherFixtures'
 import {
   buildDashboardSuggestions,
-  computePreparednessProgress,
   selectPrimaryRiskSummary,
 } from '../data/dashboardTasks'
 
@@ -44,7 +43,7 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks())
 
 describe('Uploaded Heat Shield dashboard', () => {
-  it('shows the situation alert, five readings, and three uploaded shortcut tiles', async () => {
+  it('shows the situation alert, five readings, and shortcuts outside the grid', async () => {
     renderDashboard()
 
     expect(await screen.findByRole('heading', { name: 'Temperature' })).toBeInTheDocument()
@@ -61,11 +60,15 @@ describe('Uploaded Heat Shield dashboard', () => {
     expect(readings[3]).toHaveTextContent('UV Index')
     expect(readings[4]).toHaveTextContent('US AQI')
 
-    const shortcuts = document.querySelectorAll('.key-readings-grid .uploaded-action-tile')
-    expect(shortcuts).toHaveLength(3)
-    expect(screen.getByRole('heading', { name: 'Heat Risk' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Reports' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'AI Assistant' })).toBeInTheDocument()
+    // The grid is now purely weather readings: the Heat Risk card duplicated the
+    // heat index, and Reports/Assistant moved to their own shortcuts row.
+    expect(document.querySelectorAll('.key-readings-grid .uploaded-action-tile')).toHaveLength(0)
+    expect(screen.queryByRole('heading', { name: 'Heat Risk' })).not.toBeInTheDocument()
+    const shortcuts = document.querySelectorAll('.dashboard-shortcuts a')
+    expect(shortcuts).toHaveLength(1)
+    expect(shortcuts[0]).toHaveTextContent('AI Assistant')
+    // The heat index card still carries the screening level.
+    expect(readings[1]).toHaveTextContent('High')
   })
 
   it('lets users select a city from the uploaded screen', async () => {
@@ -98,8 +101,13 @@ describe('Uploaded Heat Shield dashboard', () => {
     expect(within(taskList).getAllByText('Unassessed')).toHaveLength(3)
 
     const user = userEvent.setup()
-    await user.click(within(taskList).getAllByRole('checkbox')[0])
-    expect(screen.getByRole('progressbar', { name: 'Heat mission progress: 33%' })).toHaveAttribute('value', '33')
+    const boxes = within(taskList).getAllByRole('checkbox')
+    expect(boxes[0]).not.toBeChecked()
+    await user.click(boxes[0])
+    // Ticking still records against the day; only the score and progress bar
+    // were removed, so assert the checkbox state rather than a percentage.
+    expect(boxes[0]).toBeChecked()
+    expect(screen.queryByRole('progressbar', { name: /Heat mission progress/ })).toBeNull()
   })
 
   it('does not label missing environmental data as safe', () => {
@@ -118,8 +126,5 @@ describe('Uploaded Heat Shield dashboard', () => {
     const tasks = buildDashboardSuggestions(null, null)
     expect(tasks).toHaveLength(3)
     expect(tasks.every((task) => task.level === null)).toBe(true)
-    const progress = computePreparednessProgress(tasks, ['not-a-task-id', tasks[0].id])
-    expect(progress.completedCount).toBe(1)
-    expect(progress.percent).toBe(33)
   })
 })

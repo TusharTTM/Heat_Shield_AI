@@ -121,7 +121,9 @@ describe('the connected AI assistant', () => {
     await user.click(screen.getByRole('button', { name: 'Send message' }))
 
     expect(await screen.findByRole('heading', { name: 'Assistant service not configured' })).toBeInTheDocument()
-    expect(screen.getByText(/no answers are generated/)).toBeInTheDocument()
+    // A short status message, not operator setup instructions.
+    expect(screen.getByText(/not available right now/i)).toBeInTheDocument()
+    expect(screen.queryByText(/VITE_API_BASE_URL/)).toBeNull()
   })
 
   it('starts empty and lets suggested prompts ask a question', async () => {

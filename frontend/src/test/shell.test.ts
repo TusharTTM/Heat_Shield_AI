@@ -23,7 +23,9 @@ describe('document shell', () => {
   it('names metric detail views by metric and day so open tabs stay distinguishable', () => {
     expect(getDocumentTitle('/metric/temperature', 'en', '?day=today')).toBe('Temperature · Today · Heat Shield AI')
     expect(getDocumentTitle('/metric/heat-index', 'en', '?day=yesterday')).toBe('Heat Index · Yesterday · Heat Shield AI')
-    expect(getDocumentTitle('/metric/heat-risk/', 'en', '?day=tomorrow')).toBe('Heat Risk · Tomorrow · Heat Shield AI')
+    // heat-risk was retired: the band lives on heat-index now, so the old URL
+    // resolves like any other unknown metric.
+    expect(getDocumentTitle('/metric/heat-risk/', 'en', '?day=tomorrow')).toBe('Dashboard · Heat Shield AI')
   })
 
   it('drops unknown days and unknown metrics instead of naming them wrong', () => {

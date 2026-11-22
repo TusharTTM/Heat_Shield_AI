@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { AlertTriangle, BellRing, Flame, Leaf, Moon, Sun } from 'lucide-react'
+import { BellRing, Flame, Leaf, Moon, Sun } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { useSettings } from '../context/SettingsContext'
@@ -63,8 +63,7 @@ export function EarlyWarningsPanel() {
   return <section className="early-warnings" aria-labelledby="early-warnings-title">
     <div className="early-warnings-heading">
       <div>
-        <span className="uploaded-eyebrow"><AlertTriangle size={14} aria-hidden="true" />{t('early.title')}</span>
-        <h2 id="early-warnings-title">{t('early.subtitle', { hours: leadHours })}</h2>
+        <h3 id="early-warnings-title">{t('early.subtitle', { hours: leadHours })}</h3>
       </div>
     </div>
     <ul className="early-warning-list" aria-label={t('early.title')}>

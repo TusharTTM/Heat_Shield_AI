@@ -131,9 +131,9 @@ describe('buildMetricDay', () => {
   })
 
   it('exposes the same metric order and neighbours as the dashboard cards', () => {
-    expect(METRIC_ORDER).toEqual(['temperature', 'heat-index', 'humidity', 'uv-index', 'air-quality', 'heat-risk'])
-    expect(neighborMetrics('temperature')).toEqual({ previous: 'heat-risk', next: 'heat-index' })
-    expect(neighborMetrics('air-quality')).toEqual({ previous: 'uv-index', next: 'heat-risk' })
+    expect(METRIC_ORDER).toEqual(['temperature', 'heat-index', 'humidity', 'uv-index', 'air-quality'])
+    expect(neighborMetrics('temperature')).toEqual({ previous: 'air-quality', next: 'heat-index' })
+    expect(neighborMetrics('air-quality')).toEqual({ previous: 'uv-index', next: 'temperature' })
     for (const id of METRIC_ORDER) {
       expect(METRIC_DEFINITIONS[id].whatItMeans.length).toBeGreaterThan(20)
       expect(METRIC_DEFINITIONS[id].safetyGuidance.length).toBeGreaterThan(20)

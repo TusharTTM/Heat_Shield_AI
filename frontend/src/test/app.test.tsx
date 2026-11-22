@@ -30,7 +30,9 @@ describe('the screens in the uploaded design', () => {
     renderApp()
     expect(await screen.findByRole('heading', { name: 'Heat Shield dashboard for Mumbai' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'AI suggestions' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Heat mission progress' })).toBeInTheDocument()
+    // The preparedness score was removed; the checklist itself remains.
+    expect(screen.getByRole('heading', { name: 'AI suggestions' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Heat mission progress' })).not.toBeInTheDocument()
     expect(document.title).toBe('Dashboard · Heat Shield AI')
   })
 

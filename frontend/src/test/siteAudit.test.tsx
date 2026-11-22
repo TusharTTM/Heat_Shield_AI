@@ -83,16 +83,17 @@ describe('official warnings are readable, not just counted', () => {
     // The panel is the only place CAP matches are described, so it must exist
     // even when the feed is unconfigured (where it says so explicitly).
     expect(screen.getByText('Official government warnings')).toBeInTheDocument()
-    expect(screen.getByText('Official CAP backend not configured')).toBeInTheDocument()
+    expect(screen.getByText('Official warnings are not being retrieved right now')).toBeInTheDocument()
   })
 
-  it('points the Reports count at the panel rather than a removed page', async () => {
+  it('offers no official-warnings shortcut when the feed is unconfigured', async () => {
     renderApp('/')
     await screen.findByRole('heading', { name: 'Heat Shield dashboard for Mumbai' })
-    const reports = screen.getByRole('heading', { name: 'Reports' }).closest('article')
-    expect(reports).not.toBeNull()
-    // Unconfigured feed => no link, because there is nothing to jump to yet.
-    expect(within(reports!).queryByRole('link')).toBeNull()
+    // The Reports tile is gone; official warnings now surface as a shortcut only
+    // when the feed is ready, because otherwise there is nothing to jump to.
+    const shortcuts = document.querySelector('.dashboard-shortcuts')
+    expect(shortcuts).not.toBeNull()
+    expect(within(shortcuts as HTMLElement).queryByText('Official warnings')).toBeNull()
     // And no link anywhere in the app may point at the retired /alerts route.
     const retiredLinks = [...document.querySelectorAll('a[href]')].filter((a) =>
       ['/alerts', '/safety', '/forecast', '/about', '/disaster-monitor'].includes(a.getAttribute('href') ?? ''),

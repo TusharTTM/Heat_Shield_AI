@@ -147,6 +147,27 @@ describe('design system', () => {
     expect(sheet).toMatch(/radius tokens only/)
   })
 
+  it('keeps every declaration inside a rule, so the stylesheet still parses', () => {
+    // Pruning an unused rule by deleting its selector line leaves the body behind
+    // as bare declarations. `vite build` catches that; these tests did not, so the
+    // same defect reached a green test run. Here a declaration is only legal after
+    // an opening brace and before the matching closing one.
+    let depth = 0
+    const stray: string[] = []
+    for (const raw of sheet.split('\n')) {
+      const line = raw.trim()
+      if (!line.startsWith('/*')) {
+        const declaration = /^-?[a-z-]+\s*:/.test(line) && !line.startsWith('--') && !line.startsWith(':')
+        if (declaration && depth === 0) stray.push(line)
+      }
+      depth += (raw.match(/{/g) ?? []).length - (raw.match(/}/g) ?? []).length
+    }
+    expect(stray).toEqual([])
+    expect(depth).toBe(0)
+    // No empty rule or empty at-rule block either.
+    expect(sheet).not.toMatch(/\{\s*\}/)
+  })
+
   it('carries the check stamp on the first line', () => {
     expect(sheet.split('\n')[0]).toMatch(/^\/\* Hallmark ·/)
   })

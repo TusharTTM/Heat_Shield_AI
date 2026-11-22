@@ -77,6 +77,19 @@ describe('metric detail views', () => {
     expect(screen.getByText(/Last updated/)).toBeDefined()
   })
 
+  it('puts heat-illness danger signs only on the heat-index detail, never on other metrics', async () => {
+    renderApp('/metric/heat-index')
+    expect(await screen.findByRole('heading', { name: 'Heat Index · Today' })).toBeDefined()
+    expect(screen.getByRole('heading', { name: 'Danger signs — get help' })).toBeDefined()
+    expect(screen.getByText(/signs of heatstroke: get emergency help/)).toBeDefined()
+
+    cleanup()
+    renderApp('/metric/uv-index')
+    await screen.findByRole('heading', { name: 'UV Index · Today' })
+    expect(screen.queryByRole('heading', { name: 'Danger signs — get help' })).toBeNull()
+    expect(screen.queryByText(/signs of heatstroke/)).toBeNull()
+  })
+
   it('offers yesterday, today, and tomorrow controls with the active day marked', async () => {
     renderApp('/metric/temperature')
     await screen.findByRole('heading', { name: 'Temperature · Today' })
@@ -141,8 +154,10 @@ describe('metric detail views', () => {
     expect(backLinks[0].getAttribute('href')).toBe('/')
     const nextLinks = screen.getAllByRole('link', { name: 'Next metric: Heat Index' })
     expect(nextLinks[0].getAttribute('href')).toBe('/metric/heat-index?day=today')
-    const previousLinks = screen.getAllByRole('link', { name: 'Previous metric: Heat Risk' })
-    expect(previousLinks[0].getAttribute('href')).toBe('/metric/heat-risk?day=today')
+    const previousLinks = screen.getAllByRole('link', { name: 'Previous metric: Air Quality' })
+    expect(previousLinks[0].getAttribute('href')).toBe('/metric/air-quality?day=today')
+    // One Previous/Next pair per page; the footer duplicate was removed.
+    expect(screen.getAllByRole('link', { name: /Next metric:/ })).toHaveLength(1)
   })
 
   it('redirects unknown metrics back to the dashboard', async () => {
@@ -171,7 +186,7 @@ describe('dashboard metric cards', () => {
       ['Humidity — open detail view in a new tab', '/metric/humidity'],
       ['UV Index — open detail view in a new tab', '/metric/uv-index'],
       ['Air Quality — open detail view in a new tab', '/metric/air-quality'],
-      ['Heat Risk — open detail view in a new tab', '/metric/heat-risk'],
+      // Heat Risk is not a card: the band is stated on the Heat Index card.
     ]
     for (const [name, href] of expectations) {
       const link = screen.getByRole('link', { name })

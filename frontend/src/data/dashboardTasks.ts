@@ -36,20 +36,6 @@ export interface DashboardTask {
   detail: string
 }
 
-export interface PreparednessBadge {
-  id: 'first-step' | 'daily-plan' | 'multi-hazard'
-  label: string
-  rule: string
-  earned: boolean
-}
-
-export interface PreparednessProgress {
-  completedCount: number
-  totalCount: number
-  percent: number
-  badges: PreparednessBadge[]
-}
-
 const riskOrder: Record<SimpleRiskLevel, number> = {
   low: 0,
   moderate: 1,
@@ -123,7 +109,7 @@ export function selectPrimaryRiskSummary({
           }
           : {
             status: 'unconfigured',
-            headline: 'Official government feed not connected on static site',
+            headline: 'Official government warnings are not being retrieved',
             detail: 'This view shows Open-Meteo/CAMS model screening only—check NDMA SACHET directly for official alerts.',
           }
 
@@ -344,41 +330,4 @@ export function buildDashboardSuggestions(
   }
 
   return tasks.slice(0, 3)
-}
-
-export function computePreparednessProgress(
-  tasks: DashboardTask[],
-  completedIds: string[],
-): PreparednessProgress {
-  const validSet = new Set(completedIds)
-  const completedTasks = tasks.filter((task) => validSet.has(task.id))
-  const completedCount = completedTasks.length
-  const totalCount = tasks.length
-  const percent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0
-
-  const hasHeatOrPrevention = completedTasks.some((task) => task.category === 'heat' || task.category === 'prevention')
-  const hasSecondDomain = completedTasks.some((task) => task.category === 'air') || completedCount >= 2
-
-  const badges: PreparednessBadge[] = [
-    {
-      id: 'first-step',
-      label: 'First Step',
-      rule: 'Complete 1 suggested precaution today',
-      earned: completedCount >= 1,
-    },
-    {
-      id: 'multi-hazard',
-      label: 'Dual-Check Ready',
-      rule: 'Complete 2+ precautions across today’s plan',
-      earned: hasHeatOrPrevention && hasSecondDomain && completedCount >= 2,
-    },
-    {
-      id: 'daily-plan',
-      label: 'Today’s Plan Complete',
-      rule: `Complete all ${totalCount} suggested precautions today`,
-      earned: totalCount > 0 && completedCount === totalCount,
-    },
-  ]
-
-  return { completedCount, totalCount, percent, badges }
 }

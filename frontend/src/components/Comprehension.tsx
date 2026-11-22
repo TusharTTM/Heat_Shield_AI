@@ -31,12 +31,12 @@ export const GLOSSARY_TERMS = {
   cpcbAqi: {
     term: 'Indian CPCB AQI',
     plain: 'Official air-quality index measured at physical Central Pollution Control Board ground stations in India.',
-    technical: 'Retrieved only when an optional FastAPI backend is configured with a server-side data.gov.in key (resource 3b01bcb8-0b14-4abf-b6f2-c1bfd384ba69). Never estimated from CAMS.',
+    technical: 'Measured at CPCB stations, never estimated from the CAMS model. Not shown here unless a station feed is connected.',
   },
   cap: {
     term: 'CAP (Common Alerting Protocol)',
     plain: 'The international digital format used by NDMA SACHET and IMD to publish official disaster warnings with affected areas, severity, and expiry times.',
-    technical: 'Validated XML messages from sachet.ndma.gov.in. Requires a configured FastAPI backend; static GitHub Pages cannot fetch cross-origin CAP XML directly.',
+    technical: 'Validated XML messages published by NDMA SACHET and IMD, carrying affected areas, severity, and expiry.',
   },
   pm: {
     term: 'PM2.5 & PM10 (µg/m³)',

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { ArrowLeft, ArrowUp, Menu as MenuIcon, Paperclip, Plus, ShieldCheck, Volume2, X } from 'lucide-react'
+import { ArrowLeft, ArrowUp, Menu as MenuIcon, Plus, ShieldCheck, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import {
   ASSISTANT_API_CONFIGURED, AssistantApiError, sendAssistantChat,
@@ -34,7 +34,6 @@ export default function Assistant() {
   const selected = getRegion(region)
 
   const [prompt, setPrompt] = useState('')
-  const [fileName, setFileName] = useState('')
   const [phase, setPhase] = useState<Phase>(ASSISTANT_API_CONFIGURED ? 'idle' : 'unavailable')
   const [errorDetail, setErrorDetail] = useState<string | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -211,18 +210,7 @@ export default function Assistant() {
     {phase === 'unavailable' && (
       <section className="assistant-unavailable" role="status" aria-labelledby="assistant-unavailable-title">
         <h2 id="assistant-unavailable-title">{t('assistant.notConfiguredTitle')}</h2>
-        <p>This deployment has no assistant backend connected, so no answers are generated — and none are faked.</p>
-        <details className="official-why-drawer">
-          <summary>Technical setup details</summary>
-          <p className="operator-detail-note">
-            <span className="operator-detail-tag">For site operators:</span> Set{' '}
-            <code>VITE_API_BASE_URL</code> to a deployed Heat Shield FastAPI backend (see{' '}
-            <code>docs/DEPLOYMENT.md</code>) and configure <code>ASSISTANT_API_KEY</code> on the
-            server. The key never reaches the browser; without it the backend fails closed with{' '}
-            <code>503 ASSISTANT_NOT_CONFIGURED</code>. On the standalone GitHub Pages deployment
-            this message is expected until a backend is added.
-          </p>
-        </details>
+        <p>{t('assistant.notConfiguredBody')}</p>
       </section>
     )}
 
@@ -240,31 +228,16 @@ export default function Assistant() {
     )}
 
     <div className="assistant-composer-wrap">
-      {fileName && <p className="assistant-file-status" role="status">Selected file: {fileName}</p>}
       <p className="assistant-connection-note">{t('assistant.privacyNote', { city: selected.name })}</p>
       <form className="assistant-composer" onSubmit={submitPrompt}>
-        <label className="assistant-attach" htmlFor="assistant-file" aria-label="Upload a file">
-          <Paperclip size={20} aria-hidden="true" />
-          <span>Upload</span>
-        </label>
-        <input
-          id="assistant-file"
-          className="sr-only"
-          type="file"
-          onChange={(event) => setFileName(event.currentTarget.files?.[0]?.name ?? '')}
-        />
         <input
           className="assistant-prompt"
           aria-label={t('metric.ask')}
-          placeholder={t('metric.ask')}
+          placeholder={t('assistant.canAsk')}
           value={prompt}
           disabled={phase === 'loading'}
           onChange={(event) => setPrompt(event.currentTarget.value)}
         />
-        <button className="assistant-voice" type="button" disabled aria-label="Voice input unavailable">
-          <Volume2 size={20} aria-hidden="true" />
-          <span>Voice</span>
-        </button>
         <button
           className="assistant-send"
           type="submit"
