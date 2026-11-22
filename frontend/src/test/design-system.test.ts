@@ -168,6 +168,42 @@ describe('design system', () => {
     expect(sheet).not.toMatch(/\{\s*\}/)
   })
 
+  it('meets the Web Interface Guidelines checks a stylesheet can carry', () => {
+    // Vercel's Web Interface Guidelines, as far as CSS can prove them. Each of
+    // these was violated somewhere in the app when the guideline was adopted.
+    // 1. Never disable zoom.
+    const html = readFileSync('index.html', 'utf8')
+    expect(html).not.toMatch(/user-scalable\s*=\s*no|maximum-scale\s*=\s*1/)
+    // 2. Dark-first: color-scheme and theme-color agree with the actual canvas.
+    expect(tokens).toMatch(/color-scheme:\s*dark/)
+    expect(html).toMatch(/<html[^>]*data-theme="dark"/)
+    expect(html).toMatch(/theme-color" content="#090909"/)
+    // 3. A visible focus ring exists globally, and no rule removes one without
+    //    either a replacement outline or a focus-within treatment on the parent.
+    expect(base).toMatch(/:focus-visible\s*\{[^}]*outline:\s*2px solid var\(--focus\)/)
+    //    Three opt-outs are deliberate and each is listed here:
+    //      .page-content          a scroll target, not a control (skip link)
+    //      .city-picker-search input  the ring moves to the parent :focus-within
+    //      .assistant-prompt      the ring moves to .assistant-composer:focus-within
+    const FOCUS_HANDLED_BY_PARENT = ['.page-content', '.city-picker-search input', '.assistant-prompt']
+    const stripped = [...sheet.matchAll(/([^{}]+)\{[^}]*outline:\s*(?:none|0)[^}]*\}/g)]
+      .map((m) => m[1].trim())
+      .filter((selector) => !FOCUS_HANDLED_BY_PARENT.includes(selector))
+    expect(stripped).toEqual([])
+    // And the two focus-within replacements must actually exist.
+    expect(sheet).toMatch(/\.city-picker-search:focus-within/)
+    expect(sheet).toMatch(/\.assistant-composer:focus-within/)
+    // 4. Motion is opt-out, and never `transition: all`.
+    expect(base).toMatch(/prefers-reduced-motion:\s*reduce/)
+    expect(all).not.toMatch(/transition:\s*all/)
+    // 5. Taps act immediately; the risk scene opts into `none` deliberately.
+    expect(base).toMatch(/touch-action:\s*manipulation/)
+    // 6. Full-bleed fixed surfaces respect the notch and home indicator.
+    expect(sheet).toMatch(/env\(safe-area-inset-bottom\)/)
+    // 7. Scroll containers inside overlays must not chain to the page.
+    expect(sheet).toMatch(/overscroll-behavior:\s*contain/)
+  })
+
   it('carries the check stamp on the first line', () => {
     expect(sheet.split('\n')[0]).toMatch(/^\/\* Hallmark ·/)
   })

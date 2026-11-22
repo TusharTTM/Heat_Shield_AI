@@ -273,7 +273,7 @@ export default function Profile() {
       <Link to="/" className="profile-home-link">{t('nav.dashboard')}</Link>
     </header>
 
-    <section className="profile-card" aria-label={t('nav.profile')}>
+    <section className="profile-card">
       <div className="profile-identity">
         <span className="profile-avatar" aria-hidden="true">
           {settings.photo
@@ -320,8 +320,9 @@ export default function Profile() {
             <input
               type="email"
               value={settings.email}
-              placeholder="you@example.com"
-              autoComplete="email"
+              placeholder="you@example.com…"
+              autoComplete="off"
+              spellCheck={false}
               onChange={(event) => patchSettings({ email: event.target.value })}
             />
           </label>

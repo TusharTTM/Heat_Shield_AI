@@ -109,7 +109,7 @@ export function CityPicker() {
         </div>
         <button type="button" className="city-picker-close" aria-label="Close city picker" onClick={() => closePicker(true)}><X size={18} aria-hidden="true" /></button>
       </div>
-      <div className="city-picker-search"><Search size={16} aria-hidden="true" /><label className="sr-only" htmlFor={searchId}>Search cities or states</label><input id={searchId} ref={search} type="search" value={query} placeholder="Search city or state" autoComplete="off" onChange={(event) => setQuery(event.target.value)} />{query && <button type="button" aria-label="Clear city search" onClick={() => { setQuery(''); search.current?.focus() }}><X size={15} aria-hidden="true" /></button>}</div>
+      <div className="city-picker-search"><Search size={16} aria-hidden="true" /><label className="sr-only" htmlFor={searchId}>Search cities or states</label><input id={searchId} ref={search} type="search" value={query} placeholder="Search city or state…" autoComplete="off" onChange={(event) => setQuery(event.target.value)} />{query && <button type="button" aria-label="Clear city search" onClick={() => { setQuery(''); search.current?.focus() }}><X size={15} aria-hidden="true" /></button>}</div>
       <p className="city-picker-count" role="status">{filteredRegions.length} {filteredRegions.length === 1 ? 'location' : 'locations'}{!query.trim() && filteredRegions.length > 6 ? ' · scroll for more' : ''}</p>
       {filteredRegions.length > 0 ? <ul className="city-picker-options" aria-label="Predefined locations">
         {filteredRegions.map((item) => <li key={item.slug}><button

@@ -1280,7 +1280,7 @@ td {
   box-shadow: var(--shadow-glow);
 }
 .assistant-welcome h1 { margin: 0; color: var(--ink); font-family: var(--font-display); font-size: clamp(2.2rem, 6vw, 4.25rem); font-weight: 700; letter-spacing: var(--tracking-display); text-transform: none; }
-.assistant-composer-wrap { width: min(100%, 820px); margin: 0 auto var(--space-5); }
+.assistant-composer-wrap { width: min(100%, 820px); margin: 0 auto max(var(--space-5), env(safe-area-inset-bottom)); }
 .assistant-composer {
   display: flex;
   min-height: 82px;
@@ -1321,8 +1321,11 @@ td {
   position: fixed;
   inset: 0;
   z-index: var(--z-overlay);
+  border: 0;
+  padding: 0;
   background: var(--paper);
   opacity: .62;
+  cursor: pointer;
   animation: fade-in var(--dur-short) var(--ease-out) both;
 }
 /* Opacity only: the backdrop never moves under the pointer. */
@@ -1333,6 +1336,10 @@ td {
   top: 0;
   bottom: 0;
   left: 0;
+  padding-left: max(var(--space-5), env(safe-area-inset-left));
+  padding-right: max(var(--space-5), env(safe-area-inset-right));
+  padding-top: max(var(--space-5), env(safe-area-inset-top));
+  padding-bottom: max(var(--space-5), env(safe-area-inset-bottom));
   z-index: calc(var(--z-overlay) + 1);
   display: flex;
   width: min(23rem, 86vw);

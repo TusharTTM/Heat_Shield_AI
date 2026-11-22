@@ -233,7 +233,7 @@ export default function Assistant() {
         <input
           className="assistant-prompt"
           aria-label={t('metric.ask')}
-          placeholder={t('assistant.canAsk')}
+          placeholder={t('assistant.canAsk', { city: selected.name })}
           value={prompt}
           disabled={phase === 'loading'}
           onChange={(event) => setPrompt(event.currentTarget.value)}
@@ -249,9 +249,10 @@ export default function Assistant() {
       </form>
     </div>
 
-    {menuOpen && <div
+    {menuOpen && <button
+      type="button"
       className="assistant-menu-backdrop"
-      aria-hidden="true"
+      aria-label={t('assistant.closeMenu')}
       onClick={() => {
         setMenuOpen(false)
         menuButton.current?.focus()

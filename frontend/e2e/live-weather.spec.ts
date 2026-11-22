@@ -45,4 +45,39 @@ test('live weather fills the uploaded Dashboard and all three screens navigate',
 
   const dimensions = await page.evaluate(() => ({ page: document.documentElement.scrollWidth, viewport: window.innerWidth }))
   expect(dimensions.page).toBeLessThanOrEqual(dimensions.viewport)
+
+  // Web Interface Guidelines, the parts only a real browser can prove.
+  // 1. The skip link is the first tab stop and it moves focus into <main>.
+  await page.keyboard.press('Tab')
+  const skip = page.getByRole('link', { name: 'Skip to main content' })
+  await expect(skip).toBeFocused()
+  await page.keyboard.press('Enter')
+  await expect.poll(() => page.evaluate(() => document.activeElement?.id)).toBe('main-content')
+
+  // 2. Every tab stop paints a visible focus ring, or hands it to a parent that
+  //    does (the search field and the composer do this via :focus-within).
+  await page.goto('./')
+  await expect(page.getByRole('heading', { name: 'Heat Shield dashboard for Mumbai' })).toBeVisible()
+  const ringless: string[] = []
+  for (let step = 0; step < 12; step += 1) {
+    await page.keyboard.press('Tab')
+    const state = await page.evaluate(() => {
+      const node = document.activeElement as HTMLElement | null
+      if (!node || node === document.body) return null
+      const parent = node.parentElement ? getComputedStyle(node.parentElement) : null
+      const painted = (style: CSSStyleDeclaration | null) =>
+        !!style && style.outlineStyle !== 'none' && parseFloat(style.outlineWidth) > 0
+      const ring = painted(getComputedStyle(node)) || painted(parent)
+      return { ring, label: `${node.tagName}.${node.className.toString().slice(0, 40)}` }
+    })
+    if (state && !state.ring && !ringless.includes(state.label)) ringless.push(state.label)
+  }
+  expect(ringless).toEqual([])
+
+  // 3. Nothing catches the pointer on a tap target for longer than a frame:
+  //    touch-action must never be the default `auto` on a control.
+  const autoTouch = await page.evaluate(() => [...document.querySelectorAll<HTMLElement>('a[href], button')]
+    .filter((node) => getComputedStyle(node).touchAction === 'auto')
+    .map((node) => node.tagName + '.' + node.className.toString().slice(0, 40)))
+  expect(autoTouch).toEqual([])
 })

@@ -86,3 +86,20 @@ What was actually run, and what was not.
 - The unhappy paths are covered by `appStates.test.tsx`: the error state renders as an alert that names the place, states the failure and offers a real retry button while never presenting a substituted number as live; the loading state announces itself as a status rather than an alert and names the place; and every state container is asserted to carry a visible border and padding, so an edge case never renders as a bare unstyled block. Stale-cache and missing-input states remain covered by their existing suites.
 
 These results cover local development and production builds, not a new hosted deployment. Weather and air-quality values come from Open-Meteo/CAMS model endpoints; IoT sensors, official SACHET CAP feeds, CPCB stations and any AI/ML predictions remain unconnected in the static build.
+
+## Web Interface Guidelines
+
+The site is reviewed against Vercel's [Web Interface Guidelines](https://github.com/vercel-labs/web-interface-guidelines) (pinned `434b7f9`), installed as the `web-design-guidelines` skill in `.agents/skills/` and refreshed with `npx skills add https://github.com/vercel-labs/agent-skills --skill web-design-guidelines`.
+
+Two suites hold the machine-checkable half of it, so a rewrite fails a test instead of drifting:
+
+- `src/test/webInterfaceGuidelines.test.ts` (source): no click handler on a `div`/`span`, decorative icons hidden, every control labelled, `…` not `...`, placeholders end in `…` and name an example, no paste blocking, no zoom disabling, preconnect to the reading origins.
+- `src/test/design-system.test.ts` (CSS): `color-scheme` and `theme-color` agree with the canvas, a global `:focus-visible` ring exists, no unstyled `outline` removal, reduced-motion honoured, no `transition: all`, `touch-action: manipulation` on controls, safe-area insets on full-bleed fixed surfaces, `overscroll-behavior: contain` in overlays.
+
+**Deliberate exceptions**, each pinned in the test rather than suppressed:
+
+- Three rules set `outline: none`: `.page-content` (a scroll target for the skip link, not a control), `.city-picker-search input` and `.assistant-prompt`. The last two move the ring to their parent's `:focus-within`, which the test also asserts exists.
+- The city picker keeps its open state in `useState` rather than the URL. It is a transient popover over a grid of links, and a querystring would add history entries for a control the user dismisses with Escape or an outside press. Selection itself is persisted (`hs-region`), so the state that matters survives a reload.
+- The avatar `<img>` carries no `width`/`height` attributes because the container is a fixed 72 px square with `object-fit: cover`; there is no layout shift to prevent.
+
+**Not verified here:** the guideline's rendered-page items (hover contrast, sticky-header occlusion, real focus-ring geometry) need a browser. CI's Chromium pass covers navigation, the picker and two viewports; the sandbox cannot download Chromium.
