@@ -216,8 +216,12 @@ describe('design system', () => {
       if (!CONTROL.test(selector)) continue
       if (/\bsvg\b|thumb|loading-line/.test(selector)) continue
       const body = match[2]
+      // A control may be sized with min-height or with a plain height; both are
+      // checked, because a fixed 30px switch escapes a min-height-only scan.
       const minHeight = /min-height:\s*(\d+)px/.exec(body)
       if (minHeight && Number(minHeight[1]) < 44) offenders.push(`${selector} min-height ${minHeight[1]}`)
+      const fixed = /(?:^|[;{\s])height:\s*(\d+)px/.exec(body)
+      if (fixed && Number(fixed[1]) < 44) offenders.push(`${selector} height ${fixed[1]}`)
     }
     expect(offenders).toEqual([])
     // Adjacent icon rows keep at least the 8px gap the same rule requires.

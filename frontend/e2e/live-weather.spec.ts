@@ -78,12 +78,17 @@ test('live weather fills the uploaded Dashboard and all three screens navigate',
   //     cascade, so this measures the real computed boxes.
   const smallTargets = await page.evaluate(() => {
     const out: string[] = []
-    // Buttons and styled controls only: an inline link inside a sentence is
-    // exempt by WCAG 2.2 (inline exception) and would fail this unfairly.
+    // Buttons and styled controls only. A term-help trigger is an inline link
+    // inside a sentence and an inline exception under WCAG 2.2 (target size);
+    // it is deliberately not in the selector below, nor are prose links.
     const controls = document.querySelectorAll<HTMLElement>(
       'button:not([disabled]), .dashboard-shortcut, .icon-text-button, .profile-button, .assistant-suggestion-chip, .settings-switch, .chat-history-action, .city-picker-trigger',
     )
     for (const node of controls) {
+      // An inline control is part of a sentence (the term-help trigger), which
+      // WCAG 2.2 exempts from the target-size rule by name.
+      const style = getComputedStyle(node)
+      if (style.display === 'inline' || node.classList.contains('term-help-trigger')) continue
       const box = node.getBoundingClientRect()
       if (box.width === 0 && box.height === 0) continue // visually hidden
       if (box.height < 44 - 0.5 || box.width < 44 - 0.5) {
