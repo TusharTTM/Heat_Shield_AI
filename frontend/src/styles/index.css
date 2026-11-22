@@ -157,6 +157,16 @@
 
 /* --- Page frame ----------------------------------------------------------- */
 
+/* Suspense fallback for lazily loaded routes. */
+.route-loading {
+  padding: var(--space-8) var(--gutter);
+  color: var(--muted);
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .page-content {
   flex: 1;
   width: 100%;

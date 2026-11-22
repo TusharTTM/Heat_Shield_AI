@@ -60,7 +60,8 @@ describe('the connected AI assistant', () => {
     vi.mocked(sendAssistantChat).mockReturnValue(new Promise<AssistantChatResult>((resolve) => { resolveChat = resolve }))
     renderApp()
 
-    await user.type(screen.getByRole('textbox', { name: 'Ask Heat Shield' }), 'How hot does it feel?')
+    // The route is code-split, so its controls appear a tick after render.
+    await user.type(await screen.findByRole('textbox', { name: 'Ask Heat Shield' }), 'How hot does it feel?')
     await user.click(screen.getByRole('button', { name: 'Send message' }))
 
     expect(screen.getByText('Thinking…')).toBeInTheDocument()

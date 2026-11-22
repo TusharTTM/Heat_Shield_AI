@@ -46,10 +46,15 @@ function importers(target: string): string[] {
   const stem = base.split('/').pop()!
   return Object.entries(modules)
     .filter(([path]) => nameOf(path) !== nameOf(target))
-    .filter(([, source]) =>
-      new RegExp(`from ['"][^'"]*(?:\\.\\./|\\./)${stem}['"]`).test(source) ||
-      new RegExp(`from ['"][^'"]*\\/${stem}['"]`).test(source),
-    )
+    .filter(([, source]) => {
+      // Static `from './X'`, side-effect `import './X'`, and lazy
+      // `import('./X')` all make a module reachable. Missing the dynamic form
+      // would flag a code-split route as an orphan.
+      const escaped = stem.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      return new RegExp(
+        `(?:from|import)\\s*\\(?\\s*['"][^'"]*(?:\\.\\./|\\./|/)${escaped}['"]`,
+      ).test(source)
+    })
     .map(([path]) => nameOf(path))
 }
 

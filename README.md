@@ -56,6 +56,8 @@ npm run build
 npm audit
 ```
 
+Route code splitting keeps the dashboard light: only `/` is in the entry chunk, so a dashboard visit does not download Chart.js. `npm run build` shows the split; `src/test/bundleBudget.test.ts` fails if Chart.js is preloaded again or Leaflet's stylesheet returns to the entry page.
+
 From the repository root, `make help` lists the same commands (`make setup`, `make test`, `make lint`, `make build`) so contributors do not need to memorise the per-directory setup.
 
 Network-enabled verification (not expected to work in a restricted sandbox):
@@ -94,7 +96,7 @@ Optional official sources:
 
 ```bash
 pytest backend/tests ml/tests firmware/tests -q   # 130 tests
-cd frontend && npm test                          # 208 tests, 3 network-gated skips
+cd frontend && npm test                          # 215 tests, 3 network-gated skips
 ```
 
 Automated unit tests use mocked HTTP transports and `source=simulated` sensor readings; live provider, PostgreSQL/PostGIS (`001`–`005`), and Playwright Chromium browser checks run in `.github/workflows/verify-integrations.yml` and `.github/workflows/verify-open-meteo.yml`.

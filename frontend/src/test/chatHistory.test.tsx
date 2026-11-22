@@ -60,7 +60,7 @@ describe('local chat history', () => {
   it('keeps created conversations available after a page refresh', async () => {
     const user = userEvent.setup()
     renderApp('/assistant')
-    await user.type(screen.getByRole('textbox', { name: 'Ask Heat Shield' }), 'Plan my day in the heat')
+    await user.type(await screen.findByRole('textbox', { name: 'Ask Heat Shield' }), 'Plan my day in the heat')
     await user.click(screen.getByRole('button', { name: 'Send message' }))
     await waitFor(() => within(screen.getByRole('log')).getByText('Stay hydrated and limit afternoon sun.'))
 
@@ -84,10 +84,11 @@ describe('local chat history', () => {
   it('starts a new chat empty and does not duplicate empty drafts', async () => {
     const user = userEvent.setup()
     renderApp('/assistant')
-    expect(screen.getByRole('heading', { name: 'Heat Shield AI' })).toBeInTheDocument()
+    // The assistant route is code-split; wait for it before asserting.
+    expect(await screen.findByRole('heading', { name: 'Heat Shield AI' })).toBeInTheDocument()
     expect(screen.queryByRole('log')).not.toBeInTheDocument()
 
-    await user.type(screen.getByRole('textbox', { name: 'Ask Heat Shield' }), 'First question')
+    await user.type(await screen.findByRole('textbox', { name: 'Ask Heat Shield' }), 'First question')
     await user.click(screen.getByRole('button', { name: 'Send message' }))
     await waitFor(() => within(screen.getByRole('log')).getByText('Stay hydrated and limit afternoon sun.'))
 
