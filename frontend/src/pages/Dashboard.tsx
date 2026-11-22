@@ -18,6 +18,7 @@ import { Link } from 'react-router-dom'
 import { CityPicker } from '../components/CityPicker'
 import { DayPlanner } from '../components/DayPlanner'
 import { EarlyWarningsPanel } from '../components/EarlyWarningsPanel'
+import { OfficialAlertsPanel } from '../components/OfficialAlertsPanel'
 import { RiskBadge } from '../components/ui'
 import { useApp } from '../context/AppContext'
 import { useSettings } from '../context/SettingsContext'
@@ -125,6 +126,9 @@ export default function Dashboard() {
     </section>
 
     <EarlyWarningsPanel />
+    <div id="official-warnings" className="dashboard-official-warnings">
+      <OfficialAlertsPanel state={officialAlerts} />
+    </div>
     <DayPlanner />
 
     <div className="dashboard-section-heading">
@@ -147,7 +151,13 @@ export default function Dashboard() {
         newTab
       />
       <ActionCard icon={ShieldCheck} title={t('metric.heatRisk')} value={heat?.level ?? 'Unassessed'} detail={t('metric.heatScreening')} to="/metric/heat-risk" newTab />
-      <ActionCard icon={FileText} title={t('metric.reports')} value={officialAlerts.status === 'ready' ? String(officialAlerts.data?.count ?? 0) : '—'} detail={t('metric.officialWarnings')} />
+      <ActionCard
+        icon={FileText}
+        title={t('metric.reports')}
+        value={officialAlerts.status === 'ready' ? String(officialAlerts.data?.count ?? 0) : '—'}
+        detail={t('metric.officialWarnings')}
+        {...(officialAlerts.status === 'ready' ? { to: '#official-warnings', label: `Open the ${officialAlerts.data?.count ?? 0} official warning matches` } : {})}
+      />
       <ActionCard icon={MessageCircle} title={t('metric.assistant')} value={t('metric.open')} detail={t('metric.ask')} to="/assistant" />
     </section>
 
@@ -203,6 +213,7 @@ function MetricCard({
   risk,
   to,
   newTab = false,
+  label,
 }: {
   icon: LucideIcon
   title: string
@@ -213,6 +224,8 @@ function MetricCard({
   /** Detail view for this metric; opens in a new tab so the dashboard stays open. */
   to?: string
   newTab?: boolean
+  /** Overrides the generated link name when `to` is an in-page anchor. */
+  label?: string
 }) {
   const content = <>
     <h2 className="uploaded-tile-heading"><Icon size={17} aria-hidden="true" /><span>{title}</span></h2>
@@ -227,7 +240,7 @@ function MetricCard({
       to={to}
       target={newTab ? '_blank' : undefined}
       className="metric-card-link"
-      aria-label={`${title} — ${newTab ? 'open detail view in a new tab' : 'open detail view'}`}
+      aria-label={label ?? `${title} — ${newTab ? 'open detail view in a new tab' : 'open detail view'}`}
     >
       <article className={`uploaded-tile weather-card${risk ? ` risk-${risk}` : ''}`}>{content}</article>
     </Link>
@@ -242,6 +255,7 @@ function ActionCard({
   detail,
   to,
   newTab = false,
+  label,
 }: {
   icon: LucideIcon
   title: string
@@ -249,6 +263,8 @@ function ActionCard({
   detail: string
   to?: string
   newTab?: boolean
+  /** Overrides the generated link name when `to` is an in-page anchor. */
+  label?: string
 }) {
   const content = <>
     <h2 className="uploaded-tile-heading"><Icon size={17} aria-hidden="true" /><span>{title}</span></h2>
@@ -261,7 +277,7 @@ function ActionCard({
       to={to}
       target={newTab ? '_blank' : undefined}
       className="uploaded-tile uploaded-action-tile"
-      aria-label={newTab ? `${title} — open detail view in a new tab` : undefined}
+      aria-label={label ?? (newTab ? `${title} — open detail view in a new tab` : undefined)}
     >{content}</Link>
     : <article className="uploaded-tile uploaded-action-tile">{content}</article>
 }

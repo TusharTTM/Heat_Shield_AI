@@ -2309,6 +2309,41 @@ td {
 .dashboard-refresh:hover { background: var(--paper-2); }
 .dashboard-refresh:disabled { cursor: wait; opacity: .65; }
 .dashboard-stale-note { padding: var(--space-3) var(--space-4); border-left: 3px solid var(--risk-watch); background: var(--paper-2); color: var(--ink-2); font-size: var(--text-sm); }
+
+/* Explains a retired URL instead of silently swapping the page underneath it. */
+.retired-section-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin: 0 auto var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  max-width: 72rem;
+  border-left: 3px solid var(--rule-2);
+  background: var(--paper-2);
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+}
+.retired-section-notice svg { flex: none; margin-top: 2px; }
+.retired-section-notice p { max-width: none; margin: 0; flex: 1; }
+.retired-section-dismiss {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.retired-section-dismiss:hover { background: color-mix(in srgb, var(--ink) 8%, transparent); }
+.retired-section-dismiss:focus-visible { outline: var(--rule-hair) solid var(--focus); outline-offset: 2px; }
+
+/* The dashboard's official-warning panel, mounted where the Reports count points. */
+.dashboard-official-warnings { margin-top: var(--space-4); }
 .dashboard-error-note { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2) var(--space-4); border-left-color: var(--risk-severe); }
 .dashboard-error-note p { max-width: none; }
 .dashboard-try-again { padding: var(--space-1) var(--space-3); border: 1px solid var(--rule-2); border-radius: 999px; background: transparent; color: var(--ink); cursor: pointer; }

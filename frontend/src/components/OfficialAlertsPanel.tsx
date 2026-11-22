@@ -1,5 +1,4 @@
 import { ArrowUpRight, BellRing, ExternalLink, ShieldAlert } from 'lucide-react'
-import { Link } from 'react-router-dom'
 import type { OfficialAlertItem, OfficialAlertsData } from '../api/official'
 import type { OfficialSourceState } from '../hooks/useOfficialData'
 import { GLOSSARY_TERMS, TermHelp } from './Comprehension'
@@ -19,7 +18,7 @@ function OfficialAlertCard({ alert }: { alert: OfficialAlertItem }) {
   </article>
 }
 
-export function OfficialAlertsPanel({ state, compact = false }: { state: OfficialSourceState<OfficialAlertsData>; compact?: boolean }) {
+export function OfficialAlertsPanel({ state }: { state: OfficialSourceState<OfficialAlertsData> }) {
   const data = state.data
   return <Card className="official-warning-card official-cap-panel">
     <CardHeader title="Official government warnings" subtitle="NDMA SACHET CAP, kept separate from model screening" icon={<ShieldAlert size={22} aria-hidden="true" />} action={<TermHelp definition={GLOSSARY_TERMS.cap} label="What is CAP?" />} />
@@ -41,8 +40,7 @@ export function OfficialAlertsPanel({ state, compact = false }: { state: Officia
       {data.unresolvedAreaCount > 0 && <InlineNotice kind="warning" title="Area matching is incomplete">{data.unresolvedAreaCount} active {data.unresolvedAreaCount === 1 ? 'message has' : 'messages have'} no area description or embedded polygon. They cannot support a precise location match; absence from the list is not an all-clear.</InlineNotice>}
       {data.message && <p className="official-warning-message">{data.message}</p>}
       <div className="official-alert-summary"><span><strong>{data.count}</strong> verified active area {data.count === 1 ? 'match' : 'matches'}</span><span>{data.activeMessagesEvaluated} active messages evaluated · {data.unresolvedAreaCount} without area/polygon · Feed checked <time dateTime={data.checkedAt}>{formatWeatherTime(data.checkedAt)} IST</time></span></div>
-      {data.alerts.length > 0 && <div className="official-cap-list">{(compact ? data.alerts.slice(0, 3) : data.alerts).map((alert) => <OfficialAlertCard key={`${alert.sender}:${alert.identifier}`} alert={alert} />)}</div>}
-      {compact && data.count > 3 && <Link to="/alerts" className="text-link">View all {data.count} official matches <ArrowUpRight size={14} aria-hidden="true" /></Link>}
+      {data.alerts.length > 0 && <div className="official-cap-list">{data.alerts.map((alert) => <OfficialAlertCard key={`${alert.sender}:${alert.identifier}`} alert={alert} />)}</div>}
       <details className="official-limitations"><summary>Matching, provenance and reliability</summary><p>{data.limitations}</p><p>{data.attribution}</p><p>Feed retrieved <time dateTime={data.retrievedAt}>{formatWeatherTime(data.retrievedAt)} IST</time>; checked <time dateTime={data.checkedAt}>{formatWeatherTime(data.checkedAt)} IST</time>.</p><div className="official-card-links"><a href={data.feedUrl} rel="external">Official RSS discovery feed</a><a href={data.integrationGuideUrl} rel="external">NDMA integration guide</a><a href={data.portalUrl} rel="external">SACHET portal</a></div></details>
     </>}
   </Card>

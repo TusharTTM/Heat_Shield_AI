@@ -16,7 +16,9 @@ The current app (`frontend/src/App.tsx`) routes five screens:
 - **Menu (`/menu`):** chat history and navigation.
 - **Profile (`/profile`):** units, language, alert types/lead time/quiet hours, and the device-location toggle.
 
-The earlier Disaster Monitor, Forecast, Risk Map, Alerts, Safety, and About screens are **not routed** in this branch; their source files remain in `frontend/src/pages/` but every old path redirects to the dashboard (`frontend/src/test/app.test.tsx` asserts this). The responsive interface supports mobile, tablet, desktop, keyboard operation, and reduced motion. Region selection persists only in the current browser.
+The earlier Disaster Monitor, Forecast, Risk Map, Alerts, Safety, and About screens are **not routed** in this branch; their source files remain in `frontend/src/pages/` but every old path redirects to the dashboard with an explanatory, dismissible notice (`frontend/src/test/siteAudit.test.tsx` asserts every retired path is explained).
+
+Official SACHET warnings render in a panel on the dashboard itself. The Reports count links to that panel, because there is no separate alerts page. The responsive interface supports mobile, tablet, desktop, keyboard operation, and reduced motion. Region selection persists only in the current browser.
 
 ## Heat-risk day planner (dashboard)
 
@@ -92,7 +94,7 @@ Optional official sources:
 
 ```bash
 pytest backend/tests ml/tests firmware/tests -q   # 130 tests
-cd frontend && npm test                          # 185 tests, 3 network-gated skips
+cd frontend && npm test                          # 208 tests, 3 network-gated skips
 ```
 
 Automated unit tests use mocked HTTP transports and `source=simulated` sensor readings; live provider, PostgreSQL/PostGIS (`001`–`005`), and Playwright Chromium browser checks run in `.github/workflows/verify-integrations.yml` and `.github/workflows/verify-open-meteo.yml`.
