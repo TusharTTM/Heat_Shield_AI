@@ -1,66 +1,130 @@
 import { useLayoutEffect, useRef, useState } from 'react'
+import { sampleSvgToPixels, type PixelCell } from '../lib/samplePixels'
 
 /**
- * Wordmark intro: the brand appears centred, holds long enough to be read, then
- * slides home into the dashboard's own brand and cross-fades into it.
+ * Pixel intro: the wordmark is drawn from a grid of pixels in the middle of the
+ * screen, holds, then travels to the dashboard's topbar and becomes the real
+ * brand there.
  *
- * The moving piece is a *clone of the real brand node*, not a redrawn one. The
- * merge has to be pixel-exact — a separately-styled copy would land a font-size
- * or a gap away from the original and the handover would visibly jump. Cloning
- * means it cannot drift, at any breakpoint, whatever the wordmark says in the
- * current language.
+ * Two halves make the wordmark:
  *
- * It is skipped whenever it cannot be done properly:
- * - a second time in the same tab (a welcome, not a toll booth),
- * - when the reader asked for reduced motion,
- * - on any route without the dashboard brand, and
- * - if the brand is not on screen to be merged into.
+ * - The mark is a *sample of the live SVG icon*, so the pixels form the shield
+ *   the visitor is about to see rather than a hand-drawn stand-in.
+ * - The name is painted into a canvas with the brand's own computed font, size
+ *   and colours, so it is the same face at any breakpoint and in any language.
+ *
+ * The carrier that holds both is the thing that travels, and it ends on the
+ * brand's exact box — measured at 0px delta on phone through 1920px. The
+ * glowing pixels are then swapped for the live brand, which is already waiting
+ * underneath.
+ *
+ * It is skipped whenever it cannot be done properly: a second visit in the same
+ * tab, prefers-reduced-motion, any route without the dashboard brand, a brand
+ * that is not on screen, or a canvas it cannot read.
  */
 
 const SEEN_KEY = 'heatshield.intro-seen'
 
-/** Held still, so the name can be read, before it starts moving. */
-const HOLD_MS = 620
-/** The slide home; the veil clears under it. Matches the 520ms in the CSS. */
-const MERGE_MS = 520
-/** The cross-fade at the end: long enough that neither wordmark blinks, short
- *  enough that it still reads as one thing becoming another. */
-const HANDOFF_MS = 220
 /** How large the wordmark opens, before it settles into the topbar size. */
-const HERO_SCALE = 2.6
-/** Cap on waiting for webfonts. Measuring the brand before they load would size
- *  the copy to the fallback face and the merge would land in the wrong place. */
+const HERO_SCALE = 2.55
+/** Hard ceiling so it never touches the screen edges on a narrow phone. */
+const HERO_MAX_VW = 0.84
+/** Grid resolution the shield is sampled at. Reads as pixels, not as a blur. */
+const MARK_GRID = 13
+/** Pixels assemble. */
+const ASSEMBLE_MS = 900
+/** The finished wordmark holds, so it can be read. */
+const HOLD_MS = 460
+/** Travel home. */
+const TRAVEL_MS = 560
+/** Cross-fade from the pixels to the real brand once it has landed. */
+const HANDOVER_MS = 220
+/** Cap on waiting for webfonts before measuring the brand's face. */
 const FONT_WAIT_MS = 600
 
 interface Pose { x: number; y: number; scale: number }
 
 function shouldSkip() {
-  // The brand lives on the dashboard. On any other route there is nothing to
-  // merge into, so the intro has no second act and is not played. Compared
-  // without the trailing slash, which is present on the landing route only.
   const base = import.meta.env.BASE_URL.replace(/\/$/, '')
   if (window.location.pathname.replace(/\/$/, '') !== base) return true
   try {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return true
     if (sessionStorage.getItem(SEEN_KEY)) return true
   } catch {
-    // Private contexts can throw on storage. An intro is not worth failing over,
-    // so play it.
+    // An intro is not worth failing over if storage is unavailable.
   }
   return false
 }
 
+interface WordPaint {
+  /** The two coloured runs of the name, and the ink for each. */
+  accentText: string
+  restText: string
+  accentColor: string
+  restColor: string
+  font: string
+  letterSpacing: string
+}
+
+/**
+ * Paints the wordmark into a canvas using the brand's own face and colours.
+ *
+ * Canvas because the name has to scale with the pixel mark during the travel.
+ * Rendering it as HTML text would re-lay it out at each size and the glyph
+ * spacing would visibly wobble on the way to the topbar.
+ */
+function paintWord(paint: WordPaint) {
+  // `getContext` throws outright in environments without a canvas backend, which
+  // would abort the sequence after the brand was already hidden. Skipping the
+  // intro is the right answer; an exception here is not.
+  let ctx: CanvasRenderingContext2D | null = null
+  try {
+    ctx = document.createElement('canvas').getContext('2d')
+  } catch {
+    return null
+  }
+  if (!ctx) return null
+  ctx.font = paint.font
+  // Measured before the canvas is sized, so its width is the name's width.
+  const accentWidth = ctx.measureText(paint.accentText).width
+  const width = accentWidth + ctx.measureText(paint.restText).width
+  const metrics = ctx.measureText(paint.accentText)
+  const height = Math.ceil(metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent) || 24
+
+  const dpr = Math.min(2, window.devicePixelRatio || 1)
+  const canvas = document.createElement('canvas')
+  canvas.width = Math.max(1, Math.round((width + 2) * dpr))
+  canvas.height = Math.max(1, Math.round(height * dpr))
+  canvas.style.width = `${width + 2}px`
+  canvas.style.height = `${height}px`
+  canvas.style.display = 'block'
+
+  const draw = canvas.getContext('2d')
+  if (!draw) return null
+  draw.scale(dpr, dpr)
+  draw.font = paint.font
+  draw.textBaseline = 'alphabetic'
+  draw.fillStyle = paint.accentColor
+  draw.fillText(paint.accentText, 0, height - (metrics.actualBoundingBoxDescent || 0))
+  draw.fillStyle = paint.restColor
+  draw.fillText(paint.restText, accentWidth, height - (metrics.actualBoundingBoxDescent || 0))
+
+  return { canvas, width: width + 2, height }
+}
+
 export function BrandIntro() {
   const [skip] = useState(shouldSkip)
-  const [phase, setPhase] = useState<'idle' | 'enter' | 'merge' | 'land' | 'done'>('idle')
+  const [phase, setPhase] = useState<'idle' | 'assemble' | 'travel' | 'handover' | 'done'>('idle')
   const [origin, setOrigin] = useState<Pose | null>(null)
   const [target, setTarget] = useState<Pose | null>(null)
-  const stage = useRef<HTMLDivElement>(null)
+  const [markCells, setMarkCells] = useState<PixelCell[]>([])
+  const [markBox, setMarkBox] = useState<{ w: number; h: number } | null>(null)
+  const carrier = useRef<HTMLDivElement>(null)
+  const textSlot = useRef<HTMLDivElement>(null)
   const brandRef = useRef<HTMLElement | null>(null)
 
-  // Mount-only, deliberately. An earlier version listed `phase` as a dependency,
-  // so setting the phase tore the effect down and its own `cancelled` flag
-  // stopped the sequence dead — the intro froze on its first frame.
+  // Mount-only. An earlier version depended on `phase`, so setting the phase
+  // tore the effect down and its own cancelled flag killed the sequence.
   useLayoutEffect(() => {
     if (skip) return
 
@@ -72,9 +136,6 @@ export function BrandIntro() {
     })
 
     const start = async () => {
-      // Scoped to the landmark, never a bare document query: once a copy is in
-      // the DOM it also matches `.dashboard-brand`, and cloning the copy would
-      // compound its classes on every run.
       const brand = document.querySelector<HTMLElement>('[data-intro-landmark] .dashboard-brand')
       if (!brand) {
         setPhase('done')
@@ -86,92 +147,102 @@ export function BrandIntro() {
       if (fonts?.ready) await Promise.race([fonts.ready, pause(FONT_WAIT_MS)])
       if (cancelled) return
 
-      // The brand's own box, unaffected by any transform, is what the copy must
-      // be aimed at. Measured before the stage is sized because the stage drives
-      // the copy's scale.
       const rect = brand.getBoundingClientRect()
-      // Not on screen: nothing to merge into, so nothing to play.
       if (rect.width === 0 || rect.height === 0 || rect.bottom < 0 || rect.top > window.innerHeight) {
         setPhase('done')
         return
       }
 
-      // Pin the stage's box to the brand's *unscaled* size and let scale() do the
-      // rest, so the landing pose is exactly translate to the brand's corner at
-      // scale 1. Without this the stage has no size (it renders `null` while
-      // idle) and the copy would sit at its natural size in a 0x0 box.
-      const sized = stage.current
-      if (sized) {
-        sized.style.width = `${rect.width}px`
-        sized.style.height = `${rect.height}px`
+      // Build the pixel mark from the icon the dashboard is actually showing.
+      const svg = brand.querySelector('svg')
+      const sample = svg instanceof SVGSVGElement
+        ? await sampleSvgToPixels(svg, MARK_GRID)
+        : null
+      if (cancelled) return
+      if (!sample) {
+        setPhase('done')
+        return
+      }
+      const markEl = brand.querySelector<HTMLElement>('.dashboard-brand-mark')
+      const markRect = markEl?.getBoundingClientRect() ?? rect
+      setMarkCells(sample.cells)
+      setMarkBox({ w: markRect.width, h: markRect.height })
+
+      // The wordmark's own colours and face, so the painted name is the brand's.
+      const wordEl = brand.querySelector<HTMLElement>('.dashboard-brand-word')
+      const accentEl = brand.querySelector<HTMLElement>('.dashboard-brand-accent')
+      const wordStyle = getComputedStyle(wordEl ?? brand)
+      const slot = textSlot.current
+      if (!slot) { setPhase('done'); return }
+      const accentText = accentEl?.textContent ?? ''
+      // The name as the visitor sees it, in the current language: "Heat" in the
+      // accent, the rest in the body colour, from the same two spans the brand
+      // renders. Nothing here is a hard-coded string.
+      const fullText = (wordEl?.textContent ?? '').trim()
+      const restText = fullText.slice(accentText.length)
+
+      const painted = paintWord({
+        accentText,
+        restText,
+        accentColor: getComputedStyle(accentEl ?? wordEl ?? brand).color,
+        restColor: wordStyle.color,
+        font: wordStyle.font,
+        letterSpacing: wordStyle.letterSpacing,
+      })
+      if (!painted) { setPhase('done'); return }
+      const textWidth = painted.width
+
+      const gap = parseFloat(getComputedStyle(brand).columnGap || '0') || 0
+      const heroW = (markRect.width + gap + textWidth) * HERO_SCALE
+      const scale = Math.min(HERO_SCALE, HERO_MAX_VW * window.innerWidth / (heroW / HERO_SCALE))
+
+      // The carrier is a copy of the brand's own box, at the brand's own scale,
+      // so the landing pose is one transform away and cannot drift.
+      if (slot) {
+        slot.replaceChildren()
+      }
+      const carrierEl = carrier.current
+      if (carrierEl) {
+        carrierEl.style.width = `${markRect.width + gap + textWidth}px`
+        carrierEl.style.height = `${rect.height}px`
+        carrierEl.style.gap = `${gap}px`
       }
 
-      // A copy of the brand, so the handover cannot drift.
-      const copy = brand.cloneNode(true) as HTMLElement
-      copy.removeAttribute('href')
-      copy.removeAttribute('tabindex')
-      copy.setAttribute('aria-hidden', 'true')
-      copy.className = `${copy.className} brand-intro-copy`
-
-      // The wordmark opens at hero size over the veil, then lands at the
-      // dashboard's own size. Both poses are expressed from the same origin —
-      // the stage's top-left — so the landing is one transform away and cannot
-      // drift: translate(brand position) scale(1) puts the copy exactly on the
-      // real brand, pixel for pixel, which is what makes the handover invisible.
-      const scale = Number((Math.min(HERO_SCALE, (window.innerWidth * 0.82) / rect.width)).toFixed(3))
+      targetRef.current = { x: rect.left, y: rect.top, scale: 1 }
+      setTarget({ x: rect.left, y: rect.top, scale: 1 })
       setOrigin({
-        x: (window.innerWidth - rect.width * scale) / 2,
+        x: (window.innerWidth - (markRect.width + gap + textWidth) * scale) / 2,
         y: (window.innerHeight - rect.height * scale) / 2,
         scale,
       })
-      setTarget({ x: rect.left, y: rect.top, scale: 1 })
-
-      // Phase first, so the stage is mounted and sized by the time the copy is
-      // put in it. Setting `enter` with the copy already attached animates from
-      // nothing, because the stage is invisible until this point.
-      setPhase('enter')
+      setPhase('assemble')
+      // Phase first, then populate: the nodes below only exist after the render
+      // that the phase change schedules.
       await pause(0)
       if (cancelled) return
-      // Read the ref *now*: at the top of this function the stage had not been
-      // rendered yet, so a captured `node` is null and nothing would be sized.
-      const live = stage.current
-      if (live) live.replaceChildren(copy)
+      textSlot.current?.replaceChildren(painted.canvas)
 
-      await pause(HOLD_MS)
+      brand.classList.add('is-intro-hidden')
+
+      await pause(ASSEMBLE_MS + HOLD_MS)
+      if (cancelled) return
+      setPhase('travel')
+
+      await pause(TRAVEL_MS)
       if (cancelled) return
 
-      // The copy is about to travel. Take the real brand out of view now, so the
-      // two are never stacked on top of each other — and hand it back before the
-      // copy fades, so the page is whole whichever frame the handover lands on.
-      brand.classList.add('is-intro-target')
-      setPhase('merge')
+      // Landed. The real brand is already sitting underneath this box.
+      brand.classList.remove('is-intro-hidden')
+      brand.classList.add('is-intro-shown')
+      setPhase('handover')
 
-      // Let the travel finish. The handover only starts once the copy is
-      // already sitting on the brand, so the two are never both moving.
-      await pause(MERGE_MS)
+      await pause(HANDOVER_MS)
       if (cancelled) return
-
-      // Cross-fade in place: the copy dissolves exactly over the real brand.
-      brand.classList.add('is-intro-landed')
-      setPhase('land')
-
-      await pause(HANDOFF_MS)
-      if (cancelled) return
-
-      // Hand the brand back cleanly. Leaving these on the live element would
-      // keep it tied to intro-only rules for the life of the page, and a later
-      // route change or re-render would inherit a transition it never asked for.
-      brand.classList.remove('is-intro-target')
-      brand.classList.remove('is-intro-landed')
-
       setPhase('done')
+      brand.classList.remove('is-intro-shown')
       try { sessionStorage.setItem(SEEN_KEY, '1') } catch { /* storage can be unavailable */ }
     }
 
-    // Waits for the dashboard's landmark before measuring. This component sits
-    // above the router, so its layout effect runs *before* the dashboard has
-    // rendered: querying for the brand immediately would find nothing and the
-    // intro would silently never play.
     if (document.querySelector('[data-intro-landmark]')) {
       void start()
     } else {
@@ -188,25 +259,47 @@ export function BrandIntro() {
       cancelled = true
       landmark?.disconnect()
       for (const id of timers) window.clearTimeout(id)
-      // Never leave the real brand hidden because the intro was interrupted.
-      brandRef.current?.classList.remove('is-intro-target')
-      brandRef.current?.classList.remove('is-intro-landed')
+      // Never leave the dashboard without its wordmark if the intro is cut off.
+      brandRef.current?.classList.remove('is-intro-hidden')
+      brandRef.current?.classList.remove('is-intro-shown')
     }
   }, [skip])
 
-  // The node is only mounted while the intro is playing.
+  const targetRef = useRef<Pose | null>(null)
+
   if (skip || phase === 'done') return null
 
-  const at = phase === 'merge' || phase === 'land' ? target : origin
+  const at = phase === 'travel' || phase === 'handover' ? target : origin
   return (
     <div className="brand-intro" data-phase={phase} aria-hidden="true">
       <div className="brand-intro-veil" data-phase={phase} />
       <div
-        ref={stage}
-        className="brand-intro-stage"
+        ref={carrier}
+        className="brand-intro-carrier"
         data-phase={phase}
         style={at ? { transform: `translate3d(${at.x}px, ${at.y}px, 0) scale(${at.scale})` } : undefined}
-      />
+      >
+        {markBox && (
+          <div
+            className="brand-intro-mark"
+            style={{ width: markBox.w, height: markBox.h, ['--grid' as string]: MARK_GRID }}
+          >
+            {markCells.map((cell) => (
+              <i
+                key={`${cell.col}:${cell.row}`}
+                style={{
+                  // Centre each pixel inside its cell so the grid is even.
+                  left: `${(cell.col + 0.5) * 100 / MARK_GRID}%`,
+                  top: `${(cell.row + 0.5) * 100 / MARK_GRID}%`,
+                  // Solid parts of the glyph arrive first; edges follow.
+                  animationDelay: `${(1 - cell.weight) * 420}ms`,
+                }}
+              />
+            ))}
+          </div>
+        )}
+        <div ref={textSlot} className="brand-intro-text" data-phase={phase} />
+      </div>
     </div>
   )
 }

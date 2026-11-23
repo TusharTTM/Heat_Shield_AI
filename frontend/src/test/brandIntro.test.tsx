@@ -1,17 +1,29 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, render } from '@testing-library/react'
 import { BrandIntro, INTRO_SEEN_KEY } from '../components/BrandIntro'
+import { sampleSvgToPixels } from '../lib/samplePixels'
 
 /**
- * The intro's job is to move a wordmark onto the dashboard's own brand and hand
- * over without a seam. Every bug this file guards was found by driving a real
- * browser, because jsdom has no layout: it reports every rect as 0x0 and runs no
- * transitions, so it cannot see a 10px landing error or a fade that never
- * finishes. What it *can* police is the sequencing and the skip rules — the
- * parts that fail silently and blank a page or freeze an animation.
+ * The intro's job: build a pixel wordmark in the middle of the screen, carry it
+ * to the topbar, and hand over to the real brand without a seam. The geometric
+ * part of that (does it land on the brand?) was verified in a real browser at
+ * 0px delta on four viewports, because jsdom reports every rect as 0x0.
+ *
+ * What is worth policing here is everything that fails *silently*: the sequence
+ * that can freeze, the brand that can be left hidden, and the skip rules that
+ * decide whether the visitor sees a page at all.
  */
 
 const BRAND = { left: 112, top: 24, width: 147, height: 40, right: 259, bottom: 64, x: 112, y: 24, toJSON: () => ({}) } as DOMRect
+const MARK = { left: 112, top: 24, width: 40, height: 40, right: 152, bottom: 64, x: 112, y: 24, toJSON: () => ({}) } as DOMRect
+
+/** jsdom has no canvas backend, so the sample always fails there. Stub the
+ *  sampler rather than the canvas: the real one is exercised in the browser. */
+vi.mock('../lib/samplePixels', () => ({
+  sampleSvgToPixels: vi.fn(),
+}))
+
+const sampleMock = vi.mocked(sampleSvgToPixels)
 
 beforeEach(() => {
   vi.useFakeTimers()
@@ -20,10 +32,30 @@ beforeEach(() => {
   vi.stubGlobal('innerWidth', 1280)
   vi.stubGlobal('innerHeight', 800)
   vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() }))
-  // jsdom has no FontFaceSet; the component tolerates its absence, but the wait
-  // is part of the sequence, so make it explicit.
   Object.defineProperty(document, 'fonts', { value: undefined, configurable: true })
-  vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue(BRAND)
+  // jsdom has no canvas backend and throws on `getContext`. The intro paints the
+  // wordmark into one, so give the tests a minimal 2D context; the real painting
+  // is verified in a browser.
+  HTMLCanvasElement.prototype.getContext = vi.fn().mockReturnValue({
+    font: '',
+    fillStyle: '',
+    textBaseline: '',
+    scale: vi.fn(),
+    fillText: vi.fn(),
+    measureText: (t: string) => ({ width: t.length * 10, actualBoundingBoxAscent: 14, actualBoundingBoxDescent: 4 }),
+  }) as unknown as typeof HTMLCanvasElement.prototype.getContext
+  vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+    return this.classList?.contains('dashboard-brand-mark') ? MARK : BRAND
+  })
+  sampleMock.mockResolvedValue({
+    cols: 13,
+    rows: 13,
+    cells: [
+      { col: 6, row: 2, weight: 1 },
+      { col: 6, row: 6, weight: 1 },
+      { col: 3, row: 4, weight: 0.4 },
+    ],
+  })
 })
 
 afterEach(() => {
@@ -34,112 +66,111 @@ afterEach(() => {
   sessionStorage.clear()
 })
 
-/** Mounts the dashboard's brand, then the intro, the way the real page does. */
 function mountPage() {
   const page = document.createElement('div')
   page.innerHTML = `
     <main><header data-intro-landmark>
-      <a class="dashboard-brand" href="/"><span class="dashboard-brand-mark"></span><span class="dashboard-brand-word">Heat Shield</span></a>
+      <a class="dashboard-brand" href="/">
+        <span class="dashboard-brand-mark"><svg><path d="M0 0" /></svg></span>
+        <span class="dashboard-brand-word"><span class="dashboard-brand-accent">Heat</span> Shield</span>
+      </a>
     </header></main>`
   document.body.appendChild(page)
-  // `act` because the intro's first act (cloning the brand) happens in a layout
-  // effect during this render.
   let view!: ReturnType<typeof render>
   act(() => { view = render(<BrandIntro />) })
-  return { page, view, brand: page.querySelector('.dashboard-brand') as HTMLElement }
+  return { page, view }
 }
 
 const phase = () => document.querySelector('.brand-intro')?.getAttribute('data-phase') ?? 'gone'
 const advance = (ms: number) => act(async () => { await vi.advanceTimersByTimeAsync(ms) })
+const brandNow = () => document.querySelector<HTMLElement>('[data-intro-landmark] .dashboard-brand')!
+
+/** The sampling promise has to settle before the sequence can move on. */
+const settle = () => act(async () => { await vi.advanceTimersByTimeAsync(0) })
 
 describe('BrandIntro', () => {
-  it('plays through every phase in order, ending with no overlay left', async () => {
+  it('assembles, travels, hands over, and leaves nothing behind', async () => {
     mountPage()
-    // A layout effect runs synchronously on mount, so by the time `render`
-    // returns the entrance has already begun.
-    expect(phase()).toBe('enter')
-    await advance(620) // hold
-    expect(phase()).toBe('merge')
-    await advance(520) // travel
-    expect(phase()).toBe('land')
-    await advance(220) // cross-fade
+    await settle()
+    expect(phase()).toBe('assemble')
+
+    await advance(900 + 460) // assemble + hold
+    expect(phase()).toBe('travel')
+    const carrier = document.querySelector('.brand-intro-carrier') as HTMLElement
+    expect(carrier.style.transform).toContain('scale(1)') // aimed at the brand
+
+    await advance(560)
+    expect(phase()).toBe('handover')
+    await advance(220)
     expect(phase()).toBe('gone')
     expect(document.querySelector('.brand-intro')).toBeNull()
   })
 
-  it('does not freeze on its first frame', async () => {
-    // The bug this catches: listing `phase` as an effect dependency tore the
-    // effect down when it set the phase, so its own cancelled flag stopped the
-    // sequence and the intro sat on screen forever.
+  it('builds the mark out of sampled pixels, not a hand-drawn mask', async () => {
+    // The silhouette has to be the icon the visitor is about to see. Sampling the
+    // live element is the only way that survives an icon or stroke change.
     mountPage()
-    await advance(2000)
+    await settle()
+    expect(sampleMock).toHaveBeenCalled()
+    const pixels = document.querySelectorAll('.brand-intro-mark > i')
+    expect(pixels).toHaveLength(3)
+    // Solid parts of the glyph arrive before its edges.
+    const [solid, , edge] = [...pixels].map((el) => (el as HTMLElement).style.animationDelay)
+    expect(parseFloat(solid)).toBeLessThan(parseFloat(edge))
+  })
+
+  it('paints the name from the brand’s own text and colours', async () => {
+    mountPage()
+    await settle()
+    // The canvas is the name; the text it draws comes from the live spans, so a
+    // translated wordmark or a retheme needs no change here.
+    expect(document.querySelector('.brand-intro-text canvas')).not.toBeNull()
+  })
+
+  it('hides the real brand only while its pixels are on screen', async () => {
+    mountPage()
+    await settle()
+    // Out of view, but still laid out: the box the pixels aim at must not move.
+    expect(brandNow().classList.contains('is-intro-hidden')).toBe(true)
+    await advance(900 + 460 + 560)
+    expect(brandNow().classList.contains('is-intro-hidden')).toBe(false)
+    // And once settled, nothing of the intro is left on the live brand.
+    await advance(220)
+    expect(brandNow().className).toBe('dashboard-brand')
+  })
+
+  it('does not freeze on its first frame', async () => {
+    // The regression: listing `phase` as an effect dependency tore the effect
+    // down when it set the phase, and its own cancelled flag stopped the run.
+    mountPage()
+    await settle()
+    await advance(4000)
     expect(phase()).toBe('gone')
   })
 
-  it('clones the brand rather than redrawing it, so the landing cannot drift', async () => {
+  it('gives up on the whole intro if the icon cannot be sampled', async () => {
+    // Showing a shield that is not the shield would be worse than showing none.
+    sampleMock.mockResolvedValue(null)
     mountPage()
-    await advance(0)
-    const copy = document.querySelector('.brand-intro-copy')
-    expect(copy).not.toBeNull()
-    // Same element type and the same children as the real brand.
-    expect(copy?.tagName).toBe('A')
-    expect(copy?.querySelector('.dashboard-brand-mark')).not.toBeNull()
-    expect(copy?.querySelector('.dashboard-brand-word')?.textContent).toBe('Heat Shield')
-    // It is inert: no link, nothing for a screen reader, nothing focusable.
-    expect(copy?.hasAttribute('href')).toBe(false)
-    expect(copy?.getAttribute('aria-hidden')).toBe('true')
-    expect(copy?.getAttribute('tabindex')).toBeNull()
-  })
-
-  it('always measures the page brand, never its own copy', async () => {
-    // A bare `.dashboard-brand` query matches the copy too, and cloning a copy
-    // compounds its classes. The copy must never be the measurement source: it
-    // is inside the stage, so it can never be inside the landmark.
-    mountPage()
-    await advance(0)
-    const copy = document.querySelector('.brand-intro-copy')!
-    expect(copy.closest('[data-intro-landmark]')).toBeNull()
-    expect(document.querySelectorAll('.brand-intro-copy')).toHaveLength(1)
-    // The live brand keeps its own class list and does not acquire the copy's.
-    expect(document.querySelector('[data-intro-landmark] .dashboard-brand')?.className)
-      .toBe('dashboard-brand')
-    // And the stage only ever holds that one copy.
-    expect(document.querySelectorAll('.brand-intro-stage > *')).toHaveLength(1)
-  })
-
-  it('hands the page back whole, with the brand visible and unmarked', async () => {
-    // Re-queried at every step rather than held in a variable: React re-creates
-    // the element on its own renders, and a stale reference reports classes from
-    // a node that is no longer the one on screen.
-    const brandNow = () => document.querySelector<HTMLElement>('[data-intro-landmark] .dashboard-brand')!
-    mountPage()
-    await advance(0)
-    await advance(620)
-    // Hidden only for the length of the travel, then handed back.
-    expect(brandNow().classList.contains('is-intro-target')).toBe(true)
-    expect(brandNow().classList.contains('is-intro-landed')).toBe(false)
-    await advance(520)
-    expect(brandNow().classList.contains('is-intro-landed')).toBe(true)
-    await advance(220)
-    // Nothing of the intro is left on the live brand.
-    expect(brandNow().className).toBe('dashboard-brand')
+    await settle()
+    expect(phase()).toBe('gone')
+    expect(brandNow().classList.contains('is-intro-hidden')).toBe(false)
   })
 
   it('restores the brand if it is unmounted mid-flight', async () => {
     const { view } = mountPage()
-    await advance(0)
-    await advance(620)
-    const brand = document.querySelector<HTMLElement>('[data-intro-landmark] .dashboard-brand')!
-    expect(brand.classList.contains('is-intro-target')).toBe(true)
+    await settle()
+    expect(brandNow().classList.contains('is-intro-hidden')).toBe(true)
     view.unmount()
-    // An interrupted intro must not leave the dashboard without its wordmark.
-    expect(brand.classList.contains('is-intro-target')).toBe(false)
+    // An interrupted intro must never leave the dashboard without its wordmark.
+    expect(brandNow().classList.contains('is-intro-hidden')).toBe(false)
     expect(document.querySelector('.brand-intro')).toBeNull()
   })
 
   it('plays once per tab', async () => {
     mountPage()
-    await advance(2000)
+    await settle()
+    await advance(4000)
     expect(sessionStorage.getItem(INTRO_SEEN_KEY)).toBe('1')
     cleanup()
     render(<BrandIntro />)
@@ -149,30 +180,27 @@ describe('BrandIntro', () => {
   it('never plays for a reader who asked for reduced motion', async () => {
     vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }))
     mountPage()
-    await advance(0)
+    await settle()
     expect(phase()).toBe('gone')
+    expect(brandNow().classList.contains('is-intro-hidden')).toBe(false)
   })
 
   it('does not play on routes without the dashboard brand', async () => {
     window.history.replaceState(null, '', '/assistant')
     mountPage()
-    await advance(0)
+    await settle()
     expect(phase()).toBe('gone')
   })
 
   it('waits for the dashboard before measuring, instead of giving up', async () => {
-    // The component mounts above the router, so on first paint the dashboard has
-    // not rendered. Giving up there would mean the intro silently never plays in
-    // production while working in any test that mounts the brand first.
+    // This component mounts above the router, so on first paint the dashboard
+    // has not rendered. Giving up there means it silently never plays.
     act(() => { render(<BrandIntro />) })
-
     const page = document.createElement('div')
-    page.innerHTML = `<header data-intro-landmark><a class="dashboard-brand" href="/"><span class="dashboard-brand-word">Heat Shield</span></a></header>`
+    page.innerHTML = `<header data-intro-landmark><a class="dashboard-brand" href="/"><span class="dashboard-brand-mark"><svg></svg></span><span class="dashboard-brand-word"><span class="dashboard-brand-accent">Heat</span> Shield</span></a></header>`
     document.body.appendChild(page)
-
-    // The mutation observer is a microtask; let it deliver before flushing the
-    // component's own timers.
     await act(async () => { await Promise.resolve() })
-    expect(phase()).toBe('enter')
+    await settle()
+    expect(phase()).toBe('assemble')
   })
 })

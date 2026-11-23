@@ -2438,17 +2438,18 @@ a.uploaded-tile:active { translate: 0 -1px; }
   transform: none;
 }
 
-/* --- Wordmark intro ------------------------------------------------------
- * A veil over the page while the brand plays: it rises into view centred, then
- * slides to the dashboard's own brand and cross-fades into it.
+/* --- Pixel intro --------------------------------------------------------
+ * The wordmark is built from a grid of pixels in the middle of the screen, holds,
+ * then travels to the topbar and becomes the dashboard's own brand.
  *
- * The moving piece is a clone of the real brand node, so its type, gap and
- * mark are the dashboard's by construction rather than by matching two sets of
- * rules. Nothing here may style the copy's size or font.
+ * The mark's pixels are sampled from the live SVG icon and the name is painted
+ * into a canvas with the brand's computed face, so nothing here needs to know
+ * the icon's geometry, the font, the colours or the language.
  *
- * The veil sits one layer above every overlay, so the drawer and the city picker
- * cannot cut through it for the second it exists. `--z-overlay` is the highest
- * token the theme defines.
+ * Timing is driven from the component; this file only says what each phase
+ * looks like. `pixel-in` is the one entrance the theme adds here, and it is
+ * switched off entirely under reduced motion (the component skips itself before
+ * this stylesheet matters, but the veil is disabled as well).
  */
 .brand-intro {
   position: fixed;
@@ -2463,110 +2464,99 @@ a.uploaded-tile:active { translate: 0 -1px; }
   inset: 0;
   background: var(--dashboard-canvas, var(--paper));
   opacity: 1;
-  transition: opacity 420ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  transition: opacity 460ms cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
-/* The page is revealed underneath while the mark is still travelling, so the
- * arrival is a merge rather than a cut. */
-.brand-intro-veil[data-phase='merge'] {
+/* The page comes up under the wordmark while it is still moving. */
+.brand-intro-veil[data-phase='travel'],
+.brand-intro-veil[data-phase='handover'] {
   opacity: 0;
 }
 
-.brand-intro-stage {
+/* The carrier holds the pixel mark and the painted name and is the only thing
+ * that moves. Its box is set from the brand's measured size, so the landing pose
+ * is exactly translate to the brand's corner at scale 1. */
+.brand-intro-carrier {
   position: absolute;
   top: 0;
   left: 0;
-  /* Grid, not block. The copy is an inline-flex element, so as a block child it
-   * is laid out in a line box and pushed down by the inherited half-leading —
-   * it measured 10px below the brand at every breakpoint, and the merge landed
-   * 10px low. Grid items are block-positioned at the top-left corner, with no
-   * line box to offset them. */
-  display: grid;
-  justify-items: start;
-  align-items: start;
+  display: flex;
+  align-items: center;
+  transform-origin: top left;
   will-change: transform;
-  /* Deliberately no width/height here: the hook sets them from the brand's
-   * measured box, and a rule here would fight that with the wrong size. */
+  transition: transform 560ms cubic-bezier(0.55, 0, 0.25, 1);
 }
 
-/* The stage itself is always fully opaque. It is the *copy* inside it that
- * fades up, which keeps one rule responsible for each thing: the stage carries
- * position, the copy carries presence. An earlier version faded the stage in
- * from 0 with nothing to transition to, and the intro played out invisible. */
-.brand-intro-stage[data-phase='enter'] {
-  transform-origin: top left;
-  transition: transform 440ms cubic-bezier(0.22, 0.61, 0.36, 1);
+.brand-intro-mark {
+  /* Declared here as well as set inline: the theme requires every custom
+   * property to have a declaration, and this one falls back to the same grid
+   * the component uses. */
+  --grid: 13;
+  position: relative;
+  display: grid;
+  flex: none;
+  place-items: center;
 }
 
-/* Risen and holding, while the name is read. */
-.brand-intro-stage[data-phase='merge'] {
-  transform-origin: top left;
-  transition: transform 520ms cubic-bezier(0.55, 0, 0.25, 1);
-}
-
-/* The arriving copy. Opacity is a transition (not an animation) so the whole
- * intro stays inside the theme's motion vocabulary and its reduced-motion
- * rules; the lift is what makes the name feel set down rather than faded. */
-.brand-intro-copy {
+/* One pixel. Anchored at the centre of its cell so the grid stays even whatever
+ * the cell size, and rounded a touch so it reads as a pixel rather than a dot. */
+.brand-intro-mark > i {
+  position: absolute;
+  width: calc(100% / var(--grid) * 1.16);
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  /* A token, because the theme allows no literal radii. At this size the pill
+   * radius is indistinguishable from a hairline on a 5px square. */
+  border-radius: var(--radius-pill);
+  background: var(--accent-text);
+  box-shadow: 0 0 6px color-mix(in oklch, var(--accent-text) 55%, transparent);
   opacity: 0;
-  transform: translateY(10px);
-  /* Opted out of the section stagger: it is not a page beat. */
+  scale: 0.2;
+  animation: pixel-in 260ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+.brand-intro-text {
+  flex: none;
+  display: grid;
+  align-items: center;
+  /* The canvas carries the brand's face; a fade here keeps the whole wordmark
+   * arriving as one thing rather than the mark appearing before its name. */
+  opacity: 0;
+  transition: opacity 320ms cubic-bezier(0.22, 0.61, 0.36, 1) 240ms;
+}
+
+.brand-intro-carrier[data-phase='assemble'] .brand-intro-text,
+.brand-intro-carrier[data-phase='travel'] .brand-intro-text,
+.brand-intro-carrier[data-phase='handover'] .brand-intro-text {
+  opacity: 1;
+}
+
+/* The final swap: the pixels dissolve exactly where the real brand is already
+ * sitting underneath, so the two are never both visible as separate things. */
+.brand-intro-carrier[data-phase='handover'] {
+  opacity: 0;
   transition:
-    opacity 440ms cubic-bezier(0.22, 0.61, 0.36, 1),
-    transform 440ms cubic-bezier(0.22, 0.61, 0.36, 1);
+    transform 560ms cubic-bezier(0.55, 0, 0.25, 1),
+    opacity 200ms cubic-bezier(0.22, 0.61, 0.36, 1) 40ms;
 }
 
-/* Visible for the whole entrance: it fades up as it rises, and stays up while
- * it holds. Only the merge starts fading it out again. */
-.brand-intro[data-phase='enter'] .brand-intro-copy {
-  opacity: 1;
-  transform: none;
+@keyframes pixel-in {
+  from { opacity: 0; scale: 0.2; }
+  60% { opacity: 1; }
+  to { opacity: 1; scale: 1; }
 }
 
-/* Opaque for the whole travel. Fading it here would make it dissolve
- * mid-flight, which is exactly the "it vanished" the merge must not look like:
- * the wordmark has to arrive, and only then become the page's own. */
-.brand-intro[data-phase='merge'] .brand-intro-copy {
-  opacity: 1;
-  /* `transform: none` is load-bearing, not decoration. Leaving the entrance
-   * lift in place measures the copy 10px below the brand, so it travels to a
-   * point 10px low and the handover snaps. The rise has already been seen; the
-   * copy must be flat before it is aimed anywhere. */
-  transform: none;
-  transition: opacity 180ms cubic-bezier(0.22, 0.61, 0.36, 1) 340ms;
+/* The real brand waits out of view while its pixels are on screen, and is handed
+ * back the moment they land on it. A visibility change rather than display, so
+ * the box the pixels are aimed at never moves. */
+.dashboard-brand.is-intro-hidden {
+  visibility: hidden;
 }
 
-/* Landed. The handover is a cross-fade in place: the copy fades out over the
- * real brand, which is already fading in underneath, at the same pixel.
- *
- * `transform: none` is load-bearing in every settled phase, not just this one.
- * The base rule carries the entrance lift, so a phase that declares only
- * `opacity` falls back to it: the wordmark dropped 10px the instant the merge
- * ended, which is precisely the jump this component exists to avoid. */
-.brand-intro[data-phase='land'] .brand-intro-copy {
-  opacity: 0;
-  transform: none;
-  transition: opacity 200ms cubic-bezier(0.22, 0.61, 0.36, 1);
+.dashboard-brand.is-intro-shown {
+  visibility: visible;
 }
 
-.brand-intro-stage[data-phase='land'] {
-  transition: transform 520ms cubic-bezier(0.55, 0, 0.25, 1);
-}
-
-/* The real brand is handed the wordmark as the copy arrives, so the two are
- * literally the same name in the same place at the same moment. */
-.dashboard-brand.is-intro-target {
-  opacity: 0;
-  transition: opacity 240ms cubic-bezier(0.22, 0.61, 0.36, 1) 140ms;
-}
-
-.dashboard-brand.is-intro-landed {
-  opacity: 1;
-}
-
-/* Reduced motion: the welcome is not run at all. The component skips itself,
- * and this is the belt to that braces — if a phase ever got set anyway, the
- * veil would not sit over the page. */
 @media (prefers-reduced-motion: reduce) {
   .brand-intro {
     display: none;

@@ -104,7 +104,9 @@ describe('design system', () => {
     // Loading affordances plus the two entrances this theme adds: the city panel
     // and the drawer backdrop. Nothing else is orchestrated. `spin` belonged to
     // the deleted WeatherLoading spinner, so it is gone with its only user.
-    expect([...new Set(animated)].sort()).toEqual(['fade-in', 'loading-sweep', 'picker-in'])
+    // `pixel-in` is the intro's assembly: each sampled cell of the mark appears
+    // in place. It is the only animation that runs before the page is usable.
+    expect([...new Set(animated)].sort()).toEqual(['fade-in', 'loading-sweep', 'picker-in', 'pixel-in'])
     // Every entrance and every loading indicator is switched off under reduced motion.
     const reducedMotionBlocks = [...sheet.matchAll(/@media \(prefers-reduced-motion: reduce\)\s*\{([\s\S]*?)\n\}/g)]
       .map((m) => m[1])
@@ -165,31 +167,31 @@ describe('design system', () => {
     expect(print).toMatch(/\.is-reveal-ready \.scroll-section[^{]*\{[^}]*transition:\s*none/)
   })
 
-  it('never leaves the frame offset on a settled intro phase', () => {
-    // The base `.brand-intro-copy` rule carries the entrance lift. A phase that
-    // declares only `opacity` silently falls back to that lift, and the wordmark
-    // dropped 10px at the handover — the exact jump the intro must not have.
-    // Every phase where the copy is at rest must cancel the transform.
-    for (const p of ['enter', 'merge', 'land']) {
-      const rule = new RegExp(`\\.brand-intro\\[data-phase='${p}'\\] \\.brand-intro-copy \\{[^}]*\\}`)
-      const found = sheet.match(rule)
-      expect(found, `missing rule for ${p}`).not.toBeNull()
-      expect(found![0], `phase ${p} lets the entrance lift through`).toMatch(/transform:\s*none/)
-    }
+  it('assembles the intro mark from real pixels, not a hand-drawn mask', () => {
+    // Each cell is an element positioned by percentage inside its grid, so the
+    // silhouette scales with the mark instead of depending on a fixed size.
+    expect(sheet).toMatch(/\.brand-intro-mark > i \{[^}]*position:\s*absolute/)
+    expect(sheet).toMatch(/\.brand-intro-mark > i \{[^}]*animation:\s*pixel-in/)
+    expect(sheet).toMatch(/@keyframes pixel-in/)
+    // The entry state has to be invisible, or every pixel flashes in at full
+    // size before it animates.
+    expect(sheet).toMatch(/@keyframes pixel-in \{\s*from \{[^}]*opacity:\s*0/)
   })
 
-  it('cross-fades the copy in place instead of fading it mid-flight', () => {
-    // Fading during the travel makes the wordmark dissolve on its way and the
-    // page brand pop in — the merge reads as a cut, not a landing. The travel
-    // phase must keep the copy opaque; only the landed phase fades it.
-    const merge = sheet.match(/\.brand-intro\[data-phase='merge'\] \.brand-intro-copy \{[^}]*\}/)
-    expect(merge?.[0]).toMatch(/opacity:\s*1/)
+  it('hides the real brand without moving the box the pixels aim at', () => {
+    // `display: none` would collapse the brand and the landing pose would be
+    // computed against nothing. `visibility` keeps the geometry intact.
+    expect(sheet).toMatch(/\.dashboard-brand\.is-intro-hidden \{[^}]*visibility:\s*hidden/)
+    expect(sheet).not.toMatch(/\.dashboard-brand\.is-intro-hidden \{[^}]*display:\s*none/)
   })
 
-  it('lays the copy out as a grid item, not a line box', () => {
-    // As a block child the inline-flex copy is pushed down by the inherited
-    // half-leading, which put it 10px below the brand at every breakpoint.
-    expect(sheet).toMatch(/\.brand-intro-stage \{[^}]*display:\s*grid/)
+  it('cross-fades the pixels only once they have landed', () => {
+    // Fading during the travel makes the wordmark dissolve mid-flight and the
+    // page brand pop in: the arrival reads as a cut instead of a landing.
+    const assemble = sheet.match(/\.brand-intro-carrier\[data-phase='assemble'\] \{[^}]*\}/)
+    expect(assemble?.[0] ?? '').not.toMatch(/opacity:\s*0/)
+    const handover = sheet.match(/\.brand-intro-carrier\[data-phase='handover'\] \{[^}]*\}/)
+    expect(handover?.[0]).toMatch(/opacity:\s*0/)
   })
 
   it('has no stylesheet rule for a class the app stopped rendering', () => {
