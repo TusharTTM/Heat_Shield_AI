@@ -5,6 +5,7 @@ import { useSettings } from '../context/SettingsContext'
 import { useDeviceLocationSync } from '../hooks/useDeviceLocation'
 import { HydrationReminder } from './HydrationReminder'
 import { getDocumentTitle } from '../navigation'
+import { useIntroShell } from '../hooks/useIntroShell'
 import { useT } from '../i18n'
 
 /**
@@ -46,7 +47,11 @@ export function Layout() {
     }
   }, [location.pathname, location.search, settings.display.language])
 
-  return <div className="site-shell dashboard-shell uploaded-site-shell">
+  // The dashboard is prepared, laid out and interactive the whole time; the
+  // intro only asks it to settle from a shallow blur as the particles release.
+  const shellClass = useIntroShell()
+
+  return <div className={`site-shell dashboard-shell uploaded-site-shell${shellClass}`}>
     <a className="skip-link" href="#main-content">Skip to main content</a>
     <main ref={mainContent} id="main-content" className="page-content uploaded-page-content" tabIndex={-1}>
       {showRetiredNotice && <div className="retired-section-notice" role="status">

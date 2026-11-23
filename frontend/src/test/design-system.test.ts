@@ -104,9 +104,9 @@ describe('design system', () => {
     // Loading affordances plus the two entrances this theme adds: the city panel
     // and the drawer backdrop. Nothing else is orchestrated. `spin` belonged to
     // the deleted WeatherLoading spinner, so it is gone with its only user.
-    // `pixel-in` is the intro's assembly: each sampled cell of the mark appears
-    // in place. It is the only animation that runs before the page is usable.
-    expect([...new Set(animated)].sort()).toEqual(['fade-in', 'loading-sweep', 'picker-in', 'pixel-in'])
+    // `intro-fade` is the entry overlay rising out of the page colour; it is the
+    // only animation that runs before the dashboard is usable.
+    expect([...new Set(animated)].sort()).toEqual(['fade-in', 'intro-fade', 'loading-sweep', 'picker-in'])
     // Every entrance and every loading indicator is switched off under reduced motion.
     const reducedMotionBlocks = [...sheet.matchAll(/@media \(prefers-reduced-motion: reduce\)\s*\{([\s\S]*?)\n\}/g)]
       .map((m) => m[1])
@@ -165,33 +165,6 @@ describe('design system', () => {
     const print = [...sheet.matchAll(/@media print\s*\{([\s\S]*?)\n\}/g)].map((m) => m[1]).join('\n')
     expect(print).toMatch(/\.is-reveal-ready \.scroll-section[^{]*\{[^}]*opacity:\s*1/)
     expect(print).toMatch(/\.is-reveal-ready \.scroll-section[^{]*\{[^}]*transition:\s*none/)
-  })
-
-  it('assembles the intro mark from real pixels, not a hand-drawn mask', () => {
-    // Each cell is an element positioned by percentage inside its grid, so the
-    // silhouette scales with the mark instead of depending on a fixed size.
-    expect(sheet).toMatch(/\.brand-intro-mark > i \{[^}]*position:\s*absolute/)
-    expect(sheet).toMatch(/\.brand-intro-mark > i \{[^}]*animation:\s*pixel-in/)
-    expect(sheet).toMatch(/@keyframes pixel-in/)
-    // The entry state has to be invisible, or every pixel flashes in at full
-    // size before it animates.
-    expect(sheet).toMatch(/@keyframes pixel-in \{\s*from \{[^}]*opacity:\s*0/)
-  })
-
-  it('hides the real brand without moving the box the pixels aim at', () => {
-    // `display: none` would collapse the brand and the landing pose would be
-    // computed against nothing. `visibility` keeps the geometry intact.
-    expect(sheet).toMatch(/\.dashboard-brand\.is-intro-hidden \{[^}]*visibility:\s*hidden/)
-    expect(sheet).not.toMatch(/\.dashboard-brand\.is-intro-hidden \{[^}]*display:\s*none/)
-  })
-
-  it('cross-fades the pixels only once they have landed', () => {
-    // Fading during the travel makes the wordmark dissolve mid-flight and the
-    // page brand pop in: the arrival reads as a cut instead of a landing.
-    const assemble = sheet.match(/\.brand-intro-carrier\[data-phase='assemble'\] \{[^}]*\}/)
-    expect(assemble?.[0] ?? '').not.toMatch(/opacity:\s*0/)
-    const handover = sheet.match(/\.brand-intro-carrier\[data-phase='handover'\] \{[^}]*\}/)
-    expect(handover?.[0]).toMatch(/opacity:\s*0/)
   })
 
   it('has no stylesheet rule for a class the app stopped rendering', () => {

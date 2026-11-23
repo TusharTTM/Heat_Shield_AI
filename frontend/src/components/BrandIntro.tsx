@@ -1,48 +1,35 @@
 import { useLayoutEffect, useRef, useState } from 'react'
-import { sampleSvgToPixels, type PixelCell } from '../lib/samplePixels'
+import { buildIconMask, type MaskBuild } from '../lib/mask'
+import type { DustScene } from '../lib/dustScene'
 
 /**
- * Pixel intro: the wordmark is drawn from a grid of pixels in the middle of the
- * screen, holds, then travels to the dashboard's topbar and becomes the real
- * brand there.
+ * Website entry: dust drifts over a dark frame, converges into the site's own
+ * wordmark, holds, then releases as the dashboard comes up behind it.
  *
- * Two halves make the wordmark:
+ * Real-time only — a Three.js particle system on a canvas, driven by a timeline
+ * in this component. There is no pre-rendered video anywhere in it.
  *
- * - The mark is a *sample of the live SVG icon*, so the pixels form the shield
- *   the visitor is about to see rather than a hand-drawn stand-in.
- * - The name is painted into a canvas with the brand's own computed font, size
- *   and colours, so it is the same face at any breakpoint and in any language.
+ * The name is drawn twice on purpose: the particles are Three.js, and the name
+ * underneath is HTML in the brand's real face. Sharp typography from HTML,
+ * cine matic particles from WebGL, and the latter never has to be legible on its
+ * own — which matters on a small screen where a particle resolution fine enough
+ * to read "Heat Shield" would be too slow.
  *
- * The carrier that holds both is the thing that travels, and it ends on the
- * brand's exact box — measured at 0px delta on phone through 1920px. The
- * glowing pixels are then swapped for the live brand, which is already waiting
- * underneath.
- *
- * It is skipped whenever it cannot be done properly: a second visit in the same
- * tab, prefers-reduced-motion, any route without the dashboard brand, a brand
- * that is not on screen, or a canvas it cannot read.
+ * Failure is always "show the dashboard": no WebGL, no canvas, a brand we cannot
+ * read, a tab that has seen it, or reduced motion all end with no overlay at all.
+ * The intro also never captures a click — pointer events pass straight through —
+ * so nothing about it can make the dashboard unresponsive.
  */
 
 const SEEN_KEY = 'heatshield.intro-seen'
 
-/** How large the wordmark opens, before it settles into the topbar size. */
-const HERO_SCALE = 2.55
-/** Hard ceiling so it never touches the screen edges on a narrow phone. */
-const HERO_MAX_VW = 0.84
-/** Grid resolution the shield is sampled at. Reads as pixels, not as a blur. */
-const MARK_GRID = 13
-/** Pixels assemble. */
-const ASSEMBLE_MS = 900
-/** The finished wordmark holds, so it can be read. */
-const HOLD_MS = 460
-/** Travel home. */
-const TRAVEL_MS = 560
-/** Cross-fade from the pixels to the real brand once it has landed. */
-const HANDOVER_MS = 220
-/** Cap on waiting for webfonts before measuring the brand's face. */
-const FONT_WAIT_MS = 600
+/** Wall-clock length of the sequence. The brief asks for 3–5s. */
+export const INTRO_MS = 4200
+/** Where in the timeline the name resolves. The shader's own release starts at
+ *  0.80; this is only when the HTML name is allowed to become fully crisp. */
+const FORM_AT = 0.62
 
-interface Pose { x: number; y: number; scale: number }
+type Phase = 'idle' | 'run' | 'done'
 
 function shouldSkip() {
   const base = import.meta.env.BASE_URL.replace(/\/$/, '')
@@ -51,254 +38,199 @@ function shouldSkip() {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return true
     if (sessionStorage.getItem(SEEN_KEY)) return true
   } catch {
-    // An intro is not worth failing over if storage is unavailable.
+    // Storage can throw in private contexts; an intro is not worth failing over.
   }
   return false
 }
 
-interface WordPaint {
-  /** The two coloured runs of the name, and the ink for each. */
-  accentText: string
-  restText: string
-  accentColor: string
-  restColor: string
-  font: string
-  letterSpacing: string
-}
-
-/**
- * Paints the wordmark into a canvas using the brand's own face and colours.
- *
- * Canvas because the name has to scale with the pixel mark during the travel.
- * Rendering it as HTML text would re-lay it out at each size and the glyph
- * spacing would visibly wobble on the way to the topbar.
- */
-function paintWord(paint: WordPaint) {
-  // `getContext` throws outright in environments without a canvas backend, which
-  // would abort the sequence after the brand was already hidden. Skipping the
-  // intro is the right answer; an exception here is not.
-  let ctx: CanvasRenderingContext2D | null = null
-  try {
-    ctx = document.createElement('canvas').getContext('2d')
-  } catch {
-    return null
-  }
-  if (!ctx) return null
-  ctx.font = paint.font
-  // Measured before the canvas is sized, so its width is the name's width.
-  const accentWidth = ctx.measureText(paint.accentText).width
-  const width = accentWidth + ctx.measureText(paint.restText).width
-  const metrics = ctx.measureText(paint.accentText)
-  const height = Math.ceil(metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent) || 24
-
-  const dpr = Math.min(2, window.devicePixelRatio || 1)
-  const canvas = document.createElement('canvas')
-  canvas.width = Math.max(1, Math.round((width + 2) * dpr))
-  canvas.height = Math.max(1, Math.round(height * dpr))
-  canvas.style.width = `${width + 2}px`
-  canvas.style.height = `${height}px`
-  canvas.style.display = 'block'
-
-  const draw = canvas.getContext('2d')
-  if (!draw) return null
-  draw.scale(dpr, dpr)
-  draw.font = paint.font
-  draw.textBaseline = 'alphabetic'
-  draw.fillStyle = paint.accentColor
-  draw.fillText(paint.accentText, 0, height - (metrics.actualBoundingBoxDescent || 0))
-  draw.fillStyle = paint.restColor
-  draw.fillText(paint.restText, accentWidth, height - (metrics.actualBoundingBoxDescent || 0))
-
-  return { canvas, width: width + 2, height }
+/** Eases the sequence so it starts gently and lands softly. */
+function easeProgress(t: number): number {
+  // Smoothstep over the whole run: slow, full, slow.
+  return t * t * (3 - 2 * t)
 }
 
 export function BrandIntro() {
   const [skip] = useState(shouldSkip)
-  const [phase, setPhase] = useState<'idle' | 'assemble' | 'travel' | 'handover' | 'done'>('idle')
-  const [origin, setOrigin] = useState<Pose | null>(null)
-  const [target, setTarget] = useState<Pose | null>(null)
-  const [markCells, setMarkCells] = useState<PixelCell[]>([])
-  const [markBox, setMarkBox] = useState<{ w: number; h: number } | null>(null)
-  const carrier = useRef<HTMLDivElement>(null)
-  const textSlot = useRef<HTMLDivElement>(null)
+  const [phase, setPhase] = useState<Phase>('idle')
+  const [nameReady, setNameReady] = useState(false)
+  const host = useRef<HTMLDivElement>(null)
+  const wordRef = useRef<HTMLSpanElement>(null)
+  const sceneRef = useRef<DustScene | null>(null)
+  const frameRef = useRef<number | null>(null)
+  const startedRef = useRef<number | null>(null)
   const brandRef = useRef<HTMLElement | null>(null)
 
-  // Mount-only. An earlier version depended on `phase`, so setting the phase
-  // tore the effect down and its own cancelled flag killed the sequence.
+  // Mount-only. Depending on `phase` here would tear the effect down the moment
+  // it set the phase, which is exactly how an earlier revision froze.
   useLayoutEffect(() => {
     if (skip) return
 
     let cancelled = false
+    let observer: MutationObserver | null = null
     const timers: number[] = []
-    let landmark: MutationObserver | null = null
-    const pause = (ms: number) => new Promise<void>((resolve) => {
-      timers.push(window.setTimeout(resolve, ms))
-    })
+    const later = (fn: () => void, ms: number) => { timers.push(window.setTimeout(fn, ms)) }
 
     const start = async () => {
       const brand = document.querySelector<HTMLElement>('[data-intro-landmark] .dashboard-brand')
-      if (!brand) {
+      const mount = host.current
+      if (!brand || !mount || !wordRef.current) {
         setPhase('done')
         return
       }
-      brandRef.current = brand
 
+      // Wait for the brand's own face before rasterising it, or the particles
+      // would spell the name in the fallback font.
       const fonts = (document as Document & { fonts?: { ready?: Promise<unknown> } }).fonts
-      if (fonts?.ready) await Promise.race([fonts.ready, pause(FONT_WAIT_MS)])
+      if (fonts?.ready) await Promise.race([fonts.ready, new Promise((r) => later(() => r(null), 700))])
       if (cancelled) return
 
-      const rect = brand.getBoundingClientRect()
-      if (rect.width === 0 || rect.height === 0 || rect.bottom < 0 || rect.top > window.innerHeight) {
+      // The logo the particles form is the site's own icon file. It is a real
+      // asset, it is legible as a silhouette at particle resolution, and it is
+      // the mark the dashboard already uses — not a redrawn stand-in.
+      //
+      // The wordmark is deliberately NOT the particle target. Its letterforms
+      // need a resolution a phone cannot afford at 60fps, and the result reads
+      // as a smudge. The name is part of the sequence, but it arrives as crisp
+      // HTML type on top of the formed icon, which is sharper than any particle
+      // grid and costs nothing to draw.
+      const iconMarkup = await fetch(`${import.meta.env.BASE_URL}favicon.svg`)
+        .then((r) => (r.ok ? r.text() : ''))
+        .catch(() => '')
+      if (cancelled) return
+      const mask: MaskBuild | null = iconMarkup ? await buildIconMask(iconMarkup, 1) : null
+      if (cancelled) return
+      if (!mask) {
         setPhase('done')
         return
       }
 
-      // Build the pixel mark from the icon the dashboard is actually showing.
-      const svg = brand.querySelector('svg')
-      const sample = svg instanceof SVGSVGElement
-        ? await sampleSvgToPixels(svg, MARK_GRID)
-        : null
+      // Three.js is ~600 kB of the bundle and is used for one animation on one
+      // route. Loading it here keeps it out of the entry chunk entirely; the
+      // overlay is already covering the screen, so the fetch is invisible.
+      const { createDustScene } = await import('../lib/dustScene')
       if (cancelled) return
-      if (!sample) {
+      const scene = createDustScene(mask.points, mask.aspect)
+      if (!scene) {
+        // No WebGL: no intro at all rather than a dark screen with nothing on it.
         setPhase('done')
         return
       }
-      const markEl = brand.querySelector<HTMLElement>('.dashboard-brand-mark')
-      const markRect = markEl?.getBoundingClientRect() ?? rect
-      setMarkCells(sample.cells)
-      setMarkBox({ w: markRect.width, h: markRect.height })
+      sceneRef.current = scene
+      mount.appendChild(scene.canvas)
+      scene.setSize(window.innerWidth, window.innerHeight)
 
-      // The wordmark's own colours and face, so the painted name is the brand's.
-      const wordEl = brand.querySelector<HTMLElement>('.dashboard-brand-word')
-      const accentEl = brand.querySelector<HTMLElement>('.dashboard-brand-accent')
-      const wordStyle = getComputedStyle(wordEl ?? brand)
-      const slot = textSlot.current
-      if (!slot) { setPhase('done'); return }
-      const accentText = accentEl?.textContent ?? ''
-      // The name as the visitor sees it, in the current language: "Heat" in the
-      // accent, the rest in the body colour, from the same two spans the brand
-      // renders. Nothing here is a hard-coded string.
-      const fullText = (wordEl?.textContent ?? '').trim()
-      const restText = fullText.slice(accentText.length)
-
-      const painted = paintWord({
-        accentText,
-        restText,
-        accentColor: getComputedStyle(accentEl ?? wordEl ?? brand).color,
-        restColor: wordStyle.color,
-        font: wordStyle.font,
-        letterSpacing: wordStyle.letterSpacing,
-      })
-      if (!painted) { setPhase('done'); return }
-      const textWidth = painted.width
-
-      const gap = parseFloat(getComputedStyle(brand).columnGap || '0') || 0
-      const heroW = (markRect.width + gap + textWidth) * HERO_SCALE
-      const scale = Math.min(HERO_SCALE, HERO_MAX_VW * window.innerWidth / (heroW / HERO_SCALE))
-
-      // The carrier is a copy of the brand's own box, at the brand's own scale,
-      // so the landing pose is one transform away and cannot drift.
-      if (slot) {
-        slot.replaceChildren()
-      }
-      const carrierEl = carrier.current
-      if (carrierEl) {
-        carrierEl.style.width = `${markRect.width + gap + textWidth}px`
-        carrierEl.style.height = `${rect.height}px`
-        carrierEl.style.gap = `${gap}px`
+      // The HTML name sits under the particles in the brand's real face.
+      const brandWord = brand.querySelector('.dashboard-brand-word')
+      const accentEl = brand.querySelector('.dashboard-brand-accent')
+      if (brandWord && accentEl && wordRef.current) {
+        const wordStyle = getComputedStyle(brandWord)
+        const accentStyle = getComputedStyle(accentEl)
+        const accentText = accentEl.textContent ?? ''
+        const rest = (brandWord.textContent ?? '').trim().slice(accentText.length)
+        // Family and weight only, deliberately not the shorthand: the shorthand
+        // carries the topbar's 19px, and it would override the intro's own
+        // clamp() and collapse the name back to a label.
+        wordRef.current.style.fontFamily = wordStyle.fontFamily
+        wordRef.current.style.fontWeight = wordStyle.fontWeight
+        wordRef.current.style.letterSpacing = wordStyle.letterSpacing
+        wordRef.current.replaceChildren(
+          Object.assign(document.createElement('span'), { textContent: accentText, className: 'brand-intro-accent' }),
+          document.createTextNode(rest),
+        )
+        wordRef.current.style.setProperty('--accent', accentStyle.color)
       }
 
-      targetRef.current = { x: rect.left, y: rect.top, scale: 1 }
-      setTarget({ x: rect.left, y: rect.top, scale: 1 })
-      setOrigin({
-        x: (window.innerWidth - (markRect.width + gap + textWidth) * scale) / 2,
-        y: (window.innerHeight - rect.height * scale) / 2,
-        scale,
-      })
-      setPhase('assemble')
-      // Phase first, then populate: the nodes below only exist after the render
-      // that the phase change schedules.
-      await pause(0)
-      if (cancelled) return
-      textSlot.current?.replaceChildren(painted.canvas)
-
+      // The topbar's own wordmark would otherwise sit visible behind the dust
+      // the whole time. Hidden while the logo assembles, handed back once the
+      // name is formed — the particles lead into the real brand rather than
+      // duplicating what is already on screen.
+      brandRef.current = brand
       brand.classList.add('is-intro-hidden')
+      document.documentElement.dataset.intro = 'running'
+      setPhase('run')
 
-      await pause(ASSEMBLE_MS + HOLD_MS)
-      if (cancelled) return
-      setPhase('travel')
+      const resize = () => scene.setSize(window.innerWidth, window.innerHeight)
+      window.addEventListener('resize', resize)
 
-      await pause(TRAVEL_MS)
-      if (cancelled) return
+      const tick = (now: number) => {
+        if (cancelled) return
+        if (startedRef.current === null) startedRef.current = now
+        const t = Math.min(1, (now - startedRef.current) / INTRO_MS)
+        scene.setProgress(easeProgress(t))
+        scene.render()
+        if (t < 1) {
+          frameRef.current = window.requestAnimationFrame(tick)
+        } else {
+          finish()
+        }
+      }
 
-      // Landed. The real brand is already sitting underneath this box.
-      brand.classList.remove('is-intro-hidden')
-      brand.classList.add('is-intro-shown')
-      setPhase('handover')
+      const finish = () => {
+        if (cancelled) return
+        // Stop the GPU completely: cancel the loop, then release every buffer,
+        // program and the context itself. Nothing waits for unmount.
+        if (frameRef.current !== null) window.cancelAnimationFrame(frameRef.current)
+        frameRef.current = null
+        window.removeEventListener('resize', resize)
+        scene.dispose()
+        sceneRef.current = null
+        brand.classList.remove('is-intro-hidden')
+        // Cleared only after the shell has had time to settle, then removed
+        // entirely so nothing is left on <html> for the rest of the session.
+        document.documentElement.dataset.intro = 'done'
+        later(() => { delete document.documentElement.dataset.intro }, 1200)
+        setPhase('done')
+        try { sessionStorage.setItem(SEEN_KEY, '1') } catch { /* storage can be unavailable */ }
+      }
 
-      await pause(HANDOVER_MS)
-      if (cancelled) return
-      setPhase('done')
-      brand.classList.remove('is-intro-shown')
-      try { sessionStorage.setItem(SEEN_KEY, '1') } catch { /* storage can be unavailable */ }
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)')
+      const onReduce = () => { if (reduce.matches) finish() }
+      reduce.addEventListener?.('change', onReduce)
+
+      later(() => setNameReady(true), INTRO_MS * FORM_AT)
+      startedRef.current = null
+      frameRef.current = window.requestAnimationFrame(tick)
+
+      return () => reduce.removeEventListener?.('change', onReduce)
     }
 
+    // The dashboard renders below this component, so the brand does not exist on
+    // the first frame. Wait for its landmark rather than giving up.
     if (document.querySelector('[data-intro-landmark]')) {
       void start()
     } else {
-      landmark = new MutationObserver(() => {
+      observer = new MutationObserver(() => {
         if (!document.querySelector('[data-intro-landmark]')) return
-        landmark?.disconnect()
-        landmark = null
+        observer?.disconnect()
+        observer = null
         void start()
       })
-      landmark.observe(document.body, { childList: true, subtree: true })
+      observer.observe(document.body, { childList: true, subtree: true })
     }
 
     return () => {
       cancelled = true
-      landmark?.disconnect()
+      observer?.disconnect()
       for (const id of timers) window.clearTimeout(id)
-      // Never leave the dashboard without its wordmark if the intro is cut off.
+      if (frameRef.current !== null) window.cancelAnimationFrame(frameRef.current)
+      frameRef.current = null
+      sceneRef.current?.dispose()
+      sceneRef.current = null
+      // One owner, one place: `finish` and the unmount path both route through
+      // `brand`, so the brand is restored by the same line that hid it. A
+      // document-wide sweep here would have hidden a real bug in the finish
+      // path — it made "brand never restored" pass.
       brandRef.current?.classList.remove('is-intro-hidden')
-      brandRef.current?.classList.remove('is-intro-shown')
     }
   }, [skip])
 
-  const targetRef = useRef<Pose | null>(null)
-
   if (skip || phase === 'done') return null
 
-  const at = phase === 'travel' || phase === 'handover' ? target : origin
   return (
     <div className="brand-intro" data-phase={phase} aria-hidden="true">
-      <div className="brand-intro-veil" data-phase={phase} />
-      <div
-        ref={carrier}
-        className="brand-intro-carrier"
-        data-phase={phase}
-        style={at ? { transform: `translate3d(${at.x}px, ${at.y}px, 0) scale(${at.scale})` } : undefined}
-      >
-        {markBox && (
-          <div
-            className="brand-intro-mark"
-            style={{ width: markBox.w, height: markBox.h, ['--grid' as string]: MARK_GRID }}
-          >
-            {markCells.map((cell) => (
-              <i
-                key={`${cell.col}:${cell.row}`}
-                style={{
-                  // Centre each pixel inside its cell so the grid is even.
-                  left: `${(cell.col + 0.5) * 100 / MARK_GRID}%`,
-                  top: `${(cell.row + 0.5) * 100 / MARK_GRID}%`,
-                  // Solid parts of the glyph arrive first; edges follow.
-                  animationDelay: `${(1 - cell.weight) * 420}ms`,
-                }}
-              />
-            ))}
-          </div>
-        )}
-        <div ref={textSlot} className="brand-intro-text" data-phase={phase} />
+      <div className="brand-intro-dust" ref={host} />
+      <div className="brand-intro-mark-stage" data-formed={nameReady}>
+        <span className="brand-intro-word" ref={wordRef} data-formed={nameReady} />
       </div>
     </div>
   )

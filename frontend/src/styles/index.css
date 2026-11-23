@@ -2438,127 +2438,127 @@ a.uploaded-tile:active { translate: 0 -1px; }
   transform: none;
 }
 
-/* --- Pixel intro --------------------------------------------------------
- * The wordmark is built from a grid of pixels in the middle of the screen, holds,
- * then travels to the topbar and becomes the dashboard's own brand.
+/* --- Dust intro ---------------------------------------------------------
+ * A full-screen overlay above the dashboard: dust drifts over the theme's own
+ * dark ground, converges into the site wordmark, holds, then releases as the
+ * dashboard comes up behind it.
  *
- * The mark's pixels are sampled from the live SVG icon and the name is painted
- * into a canvas with the brand's computed face, so nothing here needs to know
- * the icon's geometry, the font, the colours or the language.
+ * The particles are Three.js on `canvas.brand-intro-canvas`. The name is HTML
+ * underneath them, in the brand's real face, because a particle grid fine enough
+ * to render "Heat Shield" sharply would be far too slow on a phone — and this
+ * way the typography is sharp at every size.
  *
- * Timing is driven from the component; this file only says what each phase
- * looks like. `pixel-in` is the one entrance the theme adds here, and it is
- * switched off entirely under reduced motion (the component skips itself before
- * this stylesheet matters, but the veil is disabled as well).
+ * The overlay never takes a pointer event. Nothing about an entrance animation
+ * should be able to make the dashboard unresponsive, and the dashboard is fully
+ * prepared underneath the whole time.
  */
 .brand-intro {
   position: fixed;
   inset: 0;
   z-index: calc(var(--z-overlay) + 1);
+  display: grid;
+  place-items: center;
   pointer-events: none;
   overflow: hidden;
+  background:
+    radial-gradient(58% 46% at 50% 44%, color-mix(in oklch, var(--accent-text) 7%, transparent), transparent 72%),
+    var(--dashboard-canvas, var(--paper));
+  animation: intro-fade 520ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
 }
 
-.brand-intro-veil {
+.brand-intro-dust {
   position: absolute;
   inset: 0;
-  background: var(--dashboard-canvas, var(--paper));
-  opacity: 1;
-  transition: opacity 460ms cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
-/* The page comes up under the wordmark while it is still moving. */
-.brand-intro-veil[data-phase='travel'],
-.brand-intro-veil[data-phase='handover'] {
-  opacity: 0;
+.brand-intro-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
-/* The carrier holds the pixel mark and the painted name and is the only thing
- * that moves. Its box is set from the brand's measured size, so the landing pose
- * is exactly translate to the brand's corner at scale 1. */
-.brand-intro-carrier {
-  position: absolute;
-  top: 0;
-  left: 0;
-  display: flex;
-  align-items: center;
-  transform-origin: top left;
-  will-change: transform;
-  transition: transform 560ms cubic-bezier(0.55, 0, 0.25, 1);
-}
-
-.brand-intro-mark {
-  /* Declared here as well as set inline: the theme requires every custom
-   * property to have a declaration, and this one falls back to the same grid
-   * the component uses. */
-  --grid: 13;
+/* The name sits in the middle of the frame, under the particle cloud. It is not
+ * a label for the animation. Once the particles settle it has to be perfectly
+ * legible, which is the one thing a particle grid cannot guarantee. */
+.brand-intro-mark-stage {
   position: relative;
   display: grid;
-  flex: none;
-  place-items: center;
+  justify-items: center;
+  gap: var(--space-3);
+  /* Wide enough for the longest translated wordmark. The lockup sits a little
+   * below the middle so the icon, which gathers above centre, and the name
+   * beneath it read as one unit. */
+  max-width: min(90vw, 40rem);
+  padding-top: 26vh;
 }
 
-/* One pixel. Anchored at the centre of its cell so the grid stays even whatever
- * the cell size, and rounded a touch so it reads as a pixel rather than a dot. */
-.brand-intro-mark > i {
-  position: absolute;
-  width: calc(100% / var(--grid) * 1.16);
-  aspect-ratio: 1;
-  translate: -50% -50%;
-  /* A token, because the theme allows no literal radii. At this size the pill
-   * radius is indistinguishable from a hairline on a 5px square. */
-  border-radius: var(--radius-pill);
-  background: var(--accent-text);
-  box-shadow: 0 0 6px color-mix(in oklch, var(--accent-text) 55%, transparent);
+.brand-intro-word {
+  display: block;
+  text-align: center;
+  white-space: nowrap;
+  color: var(--ink);
+  /* Set from the brand's own computed style at runtime, and scaled up here: the
+   * intro is the one moment the name is the subject, so it is a title, not a
+   * 19px topbar label. */
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 5.2vw, 3.25rem);
+  letter-spacing: -0.03em;
+  line-height: 1.05;
   opacity: 0;
-  scale: 0.2;
-  animation: pixel-in 260ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
-}
-
-.brand-intro-text {
-  flex: none;
-  display: grid;
-  align-items: center;
-  /* The canvas carries the brand's face; a fade here keeps the whole wordmark
-   * arriving as one thing rather than the mark appearing before its name. */
-  opacity: 0;
-  transition: opacity 320ms cubic-bezier(0.22, 0.61, 0.36, 1) 240ms;
-}
-
-.brand-intro-carrier[data-phase='assemble'] .brand-intro-text,
-.brand-intro-carrier[data-phase='travel'] .brand-intro-text,
-.brand-intro-carrier[data-phase='handover'] .brand-intro-text {
-  opacity: 1;
-}
-
-/* The final swap: the pixels dissolve exactly where the real brand is already
- * sitting underneath, so the two are never both visible as separate things. */
-.brand-intro-carrier[data-phase='handover'] {
-  opacity: 0;
+  transform: scale(1.04);
+  filter: blur(6px);
   transition:
-    transform 560ms cubic-bezier(0.55, 0, 0.25, 1),
-    opacity 200ms cubic-bezier(0.22, 0.61, 0.36, 1) 40ms;
+    opacity 640ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    transform 640ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    filter 640ms cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
-@keyframes pixel-in {
-  from { opacity: 0; scale: 0.2; }
-  60% { opacity: 1; }
-  to { opacity: 1; scale: 1; }
+.brand-intro-word .brand-intro-accent {
+  color: var(--accent);
 }
 
-/* The real brand waits out of view while its pixels are on screen, and is handed
- * back the moment they land on it. A visibility change rather than display, so
- * the box the pixels are aimed at never moves. */
-.dashboard-brand.is-intro-hidden {
-  visibility: hidden;
+/* Formed: sharp, stable, legible. The whole point of the sequence. */
+.brand-intro-word[data-formed='true'] {
+  opacity: 1;
+  transform: none;
+  filter: none;
 }
 
-.dashboard-brand.is-intro-shown {
-  visibility: visible;
+/* Once formed, the wordmark carries the glow the particles give up. */
+.brand-intro-word[data-formed='true'] .brand-intro-accent {
+  text-shadow: 0 0 26px color-mix(in oklch, var(--accent) 45%, transparent);
 }
 
+/* The dashboard comes up from just behind the wordmark rather than appearing in
+ * a cut: a shallow scale and a blur that resolves. */
+.site-shell.is-under-intro {
+  transform: scale(1.012);
+  filter: blur(3px);
+  transition:
+    transform 760ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    filter 760ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.site-shell.is-intro-clear {
+  transform: none;
+  filter: none;
+}
+
+@keyframes intro-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Reduced motion: the entrance is not run at all. The component skips itself
+ * before this matters, and this guarantees a still page if a phase is ever set
+ * anyway. */
 @media (prefers-reduced-motion: reduce) {
   .brand-intro {
     display: none;
+  }
+
+  .site-shell.is-under-intro {
+    transform: none;
+    filter: none;
   }
 }
