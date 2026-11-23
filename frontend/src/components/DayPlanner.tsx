@@ -48,7 +48,7 @@ export function DayPlanner() {
         <strong>{t('plan.errorTitle')}</strong>
         <p>{t('plan.errorNote')}</p>
         <button type="button" className="icon-text-button" onClick={refresh}>
-          <RefreshCw size={13} aria-hidden="true" />
+          <RefreshCw size={16} aria-hidden="true" />
           <span>{t('plan.retry')}</span>
         </button>
       </div>
@@ -81,16 +81,16 @@ export function DayPlanner() {
             {hour.displayRisk
               ? <RiskBadge level={hour.displayRisk} subtle />
               : <span className="day-planner-hour-unknown">{t('plan.blockUnscreened')}</span>}
-            {hour.isPeak && <span className="day-planner-hour-tag"><Flame size={11} aria-hidden="true" />{t('plan.peakTag')}</span>}
-            {hour.inLowerWindow && !hour.isPeak && <span className="day-planner-hour-tag day-planner-hour-tag--lower"><Sunrise size={11} aria-hidden="true" />{t('plan.lowerTag')}</span>}
+            {hour.isPeak && <span className="day-planner-hour-tag"><Flame size={16} aria-hidden="true" />{t('plan.peakTag')}</span>}
+            {hour.inLowerWindow && !hour.isPeak && <span className="day-planner-hour-tag day-planner-hour-tag--lower"><Sunrise size={16} aria-hidden="true" />{t('plan.lowerTag')}</span>}
             <span className="sr-only">{`${formatTemp(hour.temperature)}${tempSymbol} air temperature${hour.humidity === null ? '' : `, ${Math.round(hour.humidity)}% humidity`}`}</span>
           </li>)}
         </ol>
       </div>
 
       <ul className="day-planner-legend">
-        <li><Flame size={13} aria-hidden="true" />{t('plan.legendPeak')}</li>
-        <li><Sunrise size={13} aria-hidden="true" />{t('plan.legendLower')}</li>
+        <li><Flame size={16} aria-hidden="true" />{t('plan.legendPeak')}</li>
+        <li><Sunrise size={16} aria-hidden="true" />{t('plan.legendLower')}</li>
       </ul>
 
       {plan.hasGaps && (
@@ -104,7 +104,7 @@ export function DayPlanner() {
         {plan.lowerWindows.length > 0
           ? <ul className="day-planner-window-list">
             {plan.lowerWindows.map((window) => <li key={`${window.startLabel}-${window.endLabel}`}>
-              <Sunrise size={14} aria-hidden="true" />
+              <Sunrise size={16} aria-hidden="true" />
               <strong>{window.startLabel} – {window.endLabel}</strong>
               <span>{t('plan.peakHeatIndex', { value: `${formatTemp(window.peakHeatIndex)}${tempSymbol}` })}</span>
               <RiskBadge level={window.band} subtle />

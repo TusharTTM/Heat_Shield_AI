@@ -77,13 +77,17 @@ export default function Dashboard() {
     <h1 className="sr-only">{t('dash.dashboardFor', { city: weather?.name ?? selected.name })}</h1>
 
     <header className="dashboard-topbar">
-      <Link to="/" className="dashboard-brand" aria-label="Heat Shield dashboard">
-        <span className="dashboard-brand-mark"><ShieldCheck size={23} aria-hidden="true" /></span>
-        <span>{t('dash.brand')}</span>
+      <Link to="/" className="dashboard-brand" aria-label={t('dash.brandName')}>
+        <span className="dashboard-brand-mark"><ShieldCheck size={22} aria-hidden="true" /></span>
+        {/* The accent lands on "Heat", the word that carries the meaning. It
+            used to land on "Shield", which made the brand read "Shield". */}
+        <span className="dashboard-brand-word">
+          <span className="dashboard-brand-accent">{t('dash.brandAccent')}</span>{t('dash.brandRest')}
+        </span>
       </Link>
       <div className="dashboard-top-actions">
-        <a href="#situation-alert" className="dashboard-notify" aria-label={t('dash.notify')}><BellRing size={17} aria-hidden="true" /><span className="dashboard-action-label">{t('dash.notify')}</span></a>
-        <Link to="/profile" className="dashboard-profile"><UserRound size={17} aria-hidden="true" /><span>{t('nav.profile')}</span></Link>
+        <a href="#situation-alert" className="dashboard-notify" aria-label={t('dash.notify')}><BellRing size={16} aria-hidden="true" /><span className="dashboard-action-label">{t('dash.notify')}</span></a>
+        <Link to="/profile" className="dashboard-profile"><UserRound size={16} aria-hidden="true" /><span>{t('nav.profile')}</span></Link>
       </div>
     </header>
 
@@ -114,7 +118,7 @@ export default function Dashboard() {
     >
       <div className="uploaded-alert-heading">
         <div>
-          <span className="uploaded-eyebrow"><BellRing size={15} aria-hidden="true" />{t('dash.situation')} · <span className="uploaded-alert-place">{selected.name}, {selected.state}</span></span>
+          <span className="uploaded-eyebrow"><BellRing size={16} aria-hidden="true" />{t('dash.situation')} · <span className="uploaded-alert-place">{selected.name}, {selected.state}</span></span>
           <h2 id="overall-screening-title">{latestOfficialAlert ? t('dash.officialActive') : primaryRisk.bannerLabel}</h2>
         </div>
         {/* No RiskBadge here. The h2 already renders the same word ("High"),
@@ -200,7 +204,7 @@ export default function Dashboard() {
           return <li key={task.id} className={completed ? 'completed' : ''}>
             <label>
               <input type="checkbox" checked={completed} onChange={() => toggleTask(task.id)} />
-              <span className="uploaded-checkmark" aria-hidden="true"><Check size={14} /></span>
+              <span className="uploaded-checkmark" aria-hidden="true"><Check size={16} /></span>
               <span className="uploaded-suggestion-copy">
                 <span className="uploaded-suggestion-title">{task.title}</span>
                 <small>{task.level ? `${task.level[0].toUpperCase()}${task.level.slice(1)} screening` : 'Unassessed'}</small>
@@ -239,7 +243,7 @@ function MetricCard({
 }) {
   const t = useT()
   const content = <>
-    <h2 className="uploaded-tile-heading"><Icon size={17} aria-hidden="true" /><span>{title}</span></h2>
+    <h2 className="uploaded-tile-heading"><Icon size={16} aria-hidden="true" /><span>{title}</span></h2>
     <strong className={`uploaded-tile-value${value === '—' ? ' uploaded-tile-value--empty' : ''}`}>{value}{unit && <small>{unit}</small>}</strong>
     <span className="uploaded-tile-detail">{detail}</span>
     {risk && <span className="uploaded-tile-risk">{t('screening.level', { level: SCREENING_LABELS[risk] })}</span>}

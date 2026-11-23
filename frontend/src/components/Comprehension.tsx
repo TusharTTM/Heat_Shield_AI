@@ -108,7 +108,7 @@ export function TermHelp({
         aria-label={`Explain term: ${definition.term}`}
         onClick={() => setOpen((prev) => !prev)}
       >
-        <HelpCircle size={14} aria-hidden="true" />
+        <HelpCircle size={16} aria-hidden="true" />
         <span>{label ?? 'What’s this?'}</span>
       </button>
       {open && (
@@ -116,7 +116,7 @@ export function TermHelp({
           <span className="term-help-header">
             <strong>{definition.term}</strong>
             <button type="button" className="term-help-close" aria-label={`Close ${definition.term} explanation`} onClick={() => close(true)}>
-              <X size={14} aria-hidden="true" />
+              <X size={16} aria-hidden="true" />
             </button>
           </span>
           <span className="term-help-plain"><strong>In plain language:</strong> {definition.plain}</span>
@@ -135,7 +135,7 @@ export interface JumpItem {
 export function PageJumpNav({ items, label = 'On this page' }: { items: JumpItem[]; label?: string }) {
   return (
     <nav className="page-jump-nav" aria-label={label}>
-      <span className="page-jump-label"><BookOpen size={14} aria-hidden="true" />Jump to:</span>
+      <span className="page-jump-label"><BookOpen size={16} aria-hidden="true" />Jump to:</span>
       <div className="page-jump-links">
         {items.map((item) => (
           <a key={item.id} href={`#${item.id}`} className="page-jump-pill">{item.label}</a>
@@ -180,7 +180,7 @@ export function IllustrativeExample({
   return (
     <aside className="illustrative-example" aria-label={`Illustrative example: ${title}`}>
       <div className="illustrative-example-badge">
-        <Sparkles size={14} aria-hidden="true" />
+        <Sparkles size={16} aria-hidden="true" />
         <span>Illustrative example · not live data</span>
       </div>
       <strong>{title}</strong>

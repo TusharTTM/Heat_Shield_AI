@@ -8,7 +8,7 @@ export function StatusBadge({ status = 'unavailable', children }: { status?: Dat
 }
 
 export function RiskBadge({ level, subtle = false }: { level: SimpleRiskLevel; subtle?: boolean }) {
-  return <span className={`risk-badge risk-${level}${subtle ? ' risk-subtle' : ''}`}><ShieldCheck size={15} aria-hidden="true" />{level[0].toUpperCase() + level.slice(1)}</span>
+  return <span className={`risk-badge risk-${level}${subtle ? ' risk-subtle' : ''}`}><ShieldCheck size={16} aria-hidden="true" />{level[0].toUpperCase() + level.slice(1)}</span>
 }
 
 export function Card({ children, className = '', as: Element = 'section' }: { children: ReactNode; className?: string; as?: 'section' | 'article' | 'div' }) {
@@ -27,5 +27,5 @@ export function formatWeatherTime(timestamp: string): string {
 
 export function InlineNotice({ kind = 'info', title, children }: { kind?: 'info' | 'warning' | 'danger'; title: string; children: ReactNode }) {
   const Icon = kind === 'info' ? Info : kind === 'warning' ? ShieldAlert : AlertCircle
-  return <div className={`inline-notice notice-${kind}`}><Icon size={20} aria-hidden="true" /><div><strong>{title}</strong><p>{children}</p></div></div>
+  return <div className={`inline-notice notice-${kind}`}><Icon size={18} aria-hidden="true" /><div><strong>{title}</strong><p>{children}</p></div></div>
 }

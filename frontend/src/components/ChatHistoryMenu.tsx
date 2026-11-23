@@ -57,10 +57,10 @@ export function ChatHistoryMenu({
                   onChange={(event) => setRenameValue(event.currentTarget.value)}
                 />
                 <button type="submit" className="chat-history-action" aria-label={t('menu.saveTitle')} disabled={!renameValue.trim()}>
-                  <Check size={15} aria-hidden="true" />
+                  <Check size={16} aria-hidden="true" />
                 </button>
                 <button type="button" className="chat-history-action" aria-label={t('menu.cancel')} onClick={() => setRenamingId(null)}>
-                  <X size={15} aria-hidden="true" />
+                  <X size={16} aria-hidden="true" />
                 </button>
               </form>
               : <>
@@ -93,7 +93,7 @@ export function ChatHistoryMenu({
                       setPendingDeleteId(null)
                     }}
                   >
-                    <Pencil size={14} aria-hidden="true" />
+                    <Pencil size={16} aria-hidden="true" />
                   </button>
                   <button
                     type="button"
@@ -101,7 +101,7 @@ export function ChatHistoryMenu({
                     aria-label={`${t('menu.export')}: ${title}`}
                     onClick={() => downloadConversation(conversation)}
                   >
-                    <Download size={14} aria-hidden="true" />
+                    <Download size={16} aria-hidden="true" />
                   </button>
                   {pendingDeleteId === conversation.id
                     ? <>
@@ -114,7 +114,7 @@ export function ChatHistoryMenu({
                           setPendingDeleteId(null)
                         }}
                       >
-                        <Check size={14} aria-hidden="true" />
+                        <Check size={16} aria-hidden="true" />
                       </button>
                       <button
                         type="button"
@@ -122,7 +122,7 @@ export function ChatHistoryMenu({
                         aria-label={t('menu.cancel')}
                         onClick={() => setPendingDeleteId(null)}
                       >
-                        <X size={14} aria-hidden="true" />
+                        <X size={16} aria-hidden="true" />
                       </button>
                       <span className="chat-history-confirm" role="status">{t('menu.deleteConfirm')}</span>
                     </>
@@ -135,7 +135,7 @@ export function ChatHistoryMenu({
                         setPendingClear(false)
                       }}
                     >
-                      <Trash2 size={14} aria-hidden="true" />
+                      <Trash2 size={16} aria-hidden="true" />
                     </button>}
                 </div>
               </>}

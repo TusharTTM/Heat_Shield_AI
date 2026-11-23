@@ -95,7 +95,7 @@ export default function MetricDetail() {
         <strong>{t('detail.errorTitle')}</strong>
         <p>{t('detail.errorNote')}</p>
         <button type="button" className="icon-text-button" onClick={() => { if (historyFailed) retryHistory(); else refresh() }}>
-          <RefreshCw size={13} aria-hidden="true" />
+          <RefreshCw size={16} aria-hidden="true" />
           <span>{t('detail.retry')}</span>
         </button>
       </div>
@@ -175,17 +175,17 @@ export default function MetricDetail() {
   return <section className="metric-detail" aria-labelledby="metric-detail-title">
     <div className="metric-detail-top">
       <Link to="/" className="icon-text-button metric-detail-back">
-        <ArrowLeft size={14} aria-hidden="true" />
+        <ArrowLeft size={16} aria-hidden="true" />
         <span>{t('detail.back')}</span>
       </Link>
       <nav className="metric-detail-metrics" aria-label={t('detail.metrics')}>
         <Link to={`/metric/${previous}?day=${day}`} className="icon-text-button" aria-label={t('detail.previousMetric', { metric: t(METRIC_TITLE_KEY[previous]) })}>
-          <ChevronLeft size={14} aria-hidden="true" />
+          <ChevronLeft size={16} aria-hidden="true" />
           <span>{t(METRIC_TITLE_KEY[previous])}</span>
         </Link>
         <Link to={`/metric/${next}?day=${day}`} className="icon-text-button" aria-label={t('detail.nextMetric', { metric: t(METRIC_TITLE_KEY[next]) })}>
           <span>{t(METRIC_TITLE_KEY[next])}</span>
-          <ChevronRight size={14} aria-hidden="true" />
+          <ChevronRight size={16} aria-hidden="true" />
         </Link>
       </nav>
     </div>

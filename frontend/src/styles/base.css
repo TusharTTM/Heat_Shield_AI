@@ -22,19 +22,6 @@ body {
   caret-color: var(--accent-deep);
 }
 
-/* The grain: a faint film over the glass so large dark fills are not flat.
- * A single fixed layer under everything, never animated. */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  opacity: var(--texture-opacity);
-  background-image: var(--grain);
-  background-repeat: repeat;
-}
-
 ::selection { background: color-mix(in oklab, var(--accent) 35%, transparent); }
 
 :focus-visible {
@@ -85,10 +72,12 @@ h1, h2, h3, h4 {
   text-wrap: balance;
 }
 
-h1 { font-size: var(--text-4xl); text-transform: uppercase; max-width: 22ch; }
-h2 { font-size: var(--text-2xl); text-transform: uppercase; max-width: 30ch; }
-h3 { font-size: var(--text-lg); text-transform: uppercase; max-width: 40ch; line-height: 1.15; }
-h4 { font-size: var(--text-md); text-transform: uppercase; line-height: 1.2; }
+/* Sentence case everywhere. Hierarchy comes from size and colour, not from
+ * shouting a word in capitals or from a weight above 600. */
+h1 { font-size: var(--text-4xl); max-width: 22ch; }
+h2 { font-size: var(--text-2xl); max-width: 30ch; }
+h3 { font-size: var(--text-lg); max-width: 40ch; line-height: 1.15; }
+h4 { font-size: var(--text-md); line-height: 1.2; }
 
 p { margin: 0; text-wrap: pretty; }
 p:not([class]) { max-width: 68ch; }

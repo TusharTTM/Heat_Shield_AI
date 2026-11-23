@@ -46,7 +46,7 @@ describe('the screens in the uploaded design', () => {
     // No fake reply: the message is not consumed and the setup notice stands in.
     expect(screen.queryByRole('log')).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Assistant service not configured' })).toBeInTheDocument()
-    expect(document.title).toBe('AI Assistant · Heat Shield AI')
+    expect(document.title).toBe('Assistant · Heat Shield AI')
   })
 
   it('shows the real chat-history menu and starts a new chat', async () => {

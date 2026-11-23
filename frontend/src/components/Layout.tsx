@@ -50,7 +50,7 @@ export function Layout() {
     <a className="skip-link" href="#main-content">Skip to main content</a>
     <main ref={mainContent} id="main-content" className="page-content uploaded-page-content" tabIndex={-1}>
       {showRetiredNotice && <div className="retired-section-notice" role="status">
-        <Info size={17} aria-hidden="true" />
+        <Info size={16} aria-hidden="true" />
         <p>
           <strong>{t('retired.title')}</strong>{' '}
           {t('retired.body', { path: retiredPath })}

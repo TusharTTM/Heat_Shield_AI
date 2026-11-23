@@ -66,7 +66,7 @@ describe('Uploaded Heat Shield dashboard', () => {
     expect(screen.queryByRole('heading', { name: 'Heat Risk' })).not.toBeInTheDocument()
     const shortcuts = document.querySelectorAll('.dashboard-shortcuts a')
     expect(shortcuts).toHaveLength(1)
-    expect(shortcuts[0]).toHaveTextContent('AI Assistant')
+    expect(shortcuts[0]).toHaveTextContent('Assistant')
     // The heat index card still carries the screening level.
     expect(readings[1]).toHaveTextContent('High')
   })

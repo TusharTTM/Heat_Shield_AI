@@ -135,7 +135,7 @@ export default function Assistant() {
   return <div className={`assistant-page${menuOpen ? ' menu-open' : ''}`}>
     <header className="assistant-topbar">
       <Link to="/" className="assistant-back-link" aria-label={t('assistant.backToDashboard')}>
-        <ArrowLeft size={20} aria-hidden="true" />
+        <ArrowLeft size={18} aria-hidden="true" />
       </Link>
       <button
         ref={menuButton}
@@ -244,7 +244,7 @@ export default function Assistant() {
           aria-label={t('assistant.send')}
           disabled={!prompt.trim() || phase === 'loading'}
         >
-          <ArrowUp size={20} aria-hidden="true" />
+          <ArrowUp size={18} aria-hidden="true" />
         </button>
       </form>
     </div>

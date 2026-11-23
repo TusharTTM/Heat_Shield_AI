@@ -97,9 +97,9 @@ export function CityPicker() {
         }
       }}
     >
-      <MapPin size={15} aria-hidden="true" />
+      <MapPin size={16} aria-hidden="true" />
       <span className="city-picker-name">{selected.name}</span>
-      <ChevronDown className="city-picker-chevron" size={14} aria-hidden="true" />
+      <ChevronDown className="city-picker-chevron" size={16} aria-hidden="true" />
     </button>
 
     {open && <div id={dialogId} className="city-picker-popover" role="dialog" aria-labelledby={titleId}>
@@ -109,7 +109,7 @@ export function CityPicker() {
         </div>
         <button type="button" className="city-picker-close" aria-label="Close city picker" onClick={() => closePicker(true)}><X size={18} aria-hidden="true" /></button>
       </div>
-      <div className="city-picker-search"><Search size={16} aria-hidden="true" /><label className="sr-only" htmlFor={searchId}>Search cities or states</label><input id={searchId} ref={search} type="search" value={query} placeholder="Search city or state…" autoComplete="off" onChange={(event) => setQuery(event.target.value)} />{query && <button type="button" aria-label="Clear city search" onClick={() => { setQuery(''); search.current?.focus() }}><X size={15} aria-hidden="true" /></button>}</div>
+      <div className="city-picker-search"><Search size={16} aria-hidden="true" /><label className="sr-only" htmlFor={searchId}>Search cities or states</label><input id={searchId} ref={search} type="search" value={query} placeholder="Search city or state…" autoComplete="off" onChange={(event) => setQuery(event.target.value)} />{query && <button type="button" aria-label="Clear city search" onClick={() => { setQuery(''); search.current?.focus() }}><X size={16} aria-hidden="true" /></button>}</div>
       <p className="city-picker-count" role="status">{filteredRegions.length} {filteredRegions.length === 1 ? 'location' : 'locations'}{!query.trim() && filteredRegions.length > 6 ? ' · scroll for more' : ''}</p>
       {filteredRegions.length > 0 ? <ul className="city-picker-options" aria-label="Predefined locations">
         {filteredRegions.map((item) => <li key={item.slug}><button
@@ -120,10 +120,10 @@ export function CityPicker() {
           aria-pressed={item.slug === region}
           onClick={() => { setRegion(item.slug); closePicker(true) }}
         >
-          <span className="city-picker-pin"><MapPin size={15} aria-hidden="true" /></span>
+          <span className="city-picker-pin"><MapPin size={16} aria-hidden="true" /></span>
           <span className="city-picker-option-copy"><strong>{item.name}</strong><small>{item.state}</small></span>
           <span className={`city-picker-check${item.slug === region ? ' is-selected' : ''}`} aria-hidden="true">
-            {item.slug === region && <Check size={14} />}
+            {item.slug === region && <Check size={16} />}
           </span>
         </button></li>)}
       </ul> : <div className="city-picker-empty"><MapPin size={22} aria-hidden="true" /><strong>No matching city</strong><p>Only the 15 predefined locations are available. Try a different city or state.</p></div>}

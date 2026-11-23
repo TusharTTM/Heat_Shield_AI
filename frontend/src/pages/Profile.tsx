@@ -267,7 +267,7 @@ export default function Profile() {
   return <div className="profile-page">
     <header className="profile-topbar">
       <Link to="/" className="profile-back-link" aria-label={t('profile.back')}>
-        <ArrowLeft size={20} aria-hidden="true" />
+        <ArrowLeft size={18} aria-hidden="true" />
       </Link>
       <h1>{t('nav.profile')}</h1>
       <Link to="/" className="profile-home-link">{t('nav.dashboard')}</Link>
@@ -297,7 +297,7 @@ export default function Profile() {
           />
           <button type="button" className="profile-button ghost" onClick={() => fileInput.current?.click()}>{t('profile.photoChange')}</button>
           {settings.photo && <button type="button" className="profile-button ghost" onClick={() => { setPhotoError(''); patchSettings({ photo: null }) }}>
-            <X size={14} aria-hidden="true" />{t('profile.photoRemove')}
+            <X size={16} aria-hidden="true" />{t('profile.photoRemove')}
           </button>}
         </div>}
       </div>
@@ -382,7 +382,7 @@ export default function Profile() {
                   heatAlerts: { ...heatAlerts, types: { ...heatAlerts.types, [type]: event.target.checked } },
                 })}
               />
-              <span className="settings-checkmark" aria-hidden="true"><Check size={13} /></span>
+              <span className="settings-checkmark" aria-hidden="true"><Check size={16} /></span>
               <span className="settings-check-copy">
                 <strong>{t(`alert.${type}`)}</strong>
                 <small>{ALERT_TYPE_DESCRIPTIONS[type]}</small>
@@ -498,17 +498,17 @@ export default function Profile() {
       <SettingRow title={t('profile.dataControls')} description={t('profile.dataControlsDesc')}>
         <div className="profile-button-row">
           <button type="button" className="profile-button ghost" onClick={downloadData}>
-            <Database size={14} aria-hidden="true" />{t('profile.downloadData')}
+            <Database size={16} aria-hidden="true" />{t('profile.downloadData')}
           </button>
           <button type="button" className={`profile-button danger${clearArmed ? ' armed' : ''}`} onClick={clearLocalData}>
-            <Trash2 size={14} aria-hidden="true" />{clearArmed ? t('profile.clearConfirm') : t('profile.clearData')}
+            <Trash2 size={16} aria-hidden="true" />{clearArmed ? t('profile.clearConfirm') : t('profile.clearData')}
           </button>
         </div>
       </SettingRow>
       {dataNote && <p className="profile-note" role="status">{dataNote}</p>}
       <SettingRow title={t('profile.signOut')} description={t('profile.signOutDesc')}>
         <button type="button" className="profile-button danger" onClick={signOut}>
-          <LogOut size={14} aria-hidden="true" />{t('profile.signOut')}
+          <LogOut size={16} aria-hidden="true" />{t('profile.signOut')}
         </button>
       </SettingRow>
     </SettingsSection>

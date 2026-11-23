@@ -93,7 +93,7 @@ describe('design system', () => {
     expect(sheet).toMatch(/\.city-picker-search \{[^}]*display:\s*flex/)
     // The panel is a real surface: rounded, lifted, and anchored under its trigger.
     expect(sheet).toMatch(/\.city-picker-popover \{[^}]*border-radius:/)
-    expect(sheet).toMatch(/\.city-picker-popover \{[^}]*box-shadow:\s*var\(--shadow-glow\)/)
+    expect(sheet).toMatch(/\.city-picker-popover \{[^}]*box-shadow:\s*var\(--shadow-float\)/)
     expect(sheet).toMatch(/\.city-picker-popover \{[^}]*animation:\s*picker-in/)
   })
 
@@ -177,7 +177,7 @@ describe('design system', () => {
     // 2. Dark-first: color-scheme and theme-color agree with the actual canvas.
     expect(tokens).toMatch(/color-scheme:\s*dark/)
     expect(html).toMatch(/<html[^>]*data-theme="dark"/)
-    expect(html).toMatch(/theme-color" content="#090909"/)
+    expect(html).toMatch(/theme-color" content="#120e09"/)
     // 3. A visible focus ring exists globally, and no rule removes one without
     //    either a replacement outline or a focus-within treatment on the parent.
     expect(base).toMatch(/:focus-visible\s*\{[^}]*outline:\s*2px solid var\(--focus\)/)
@@ -185,9 +185,13 @@ describe('design system', () => {
     //      .page-content          a scroll target, not a control (skip link)
     //      .city-picker-search input  the ring moves to the parent :focus-within
     //      .assistant-prompt      the ring moves to .assistant-composer:focus-within
-    const FOCUS_HANDLED_BY_PARENT = ['.page-content', '.city-picker-search input', '.assistant-prompt']
+    //      .page-content no longer appears: the skip-link target keeps its own
+    //      ring now, offset inward so it does not clip against the viewport.
+    const FOCUS_HANDLED_BY_PARENT = ['.city-picker-search input', '.assistant-prompt']
     const stripped = [...sheet.matchAll(/([^{}]+)\{[^}]*outline:\s*(?:none|0)[^}]*\}/g)]
       .map((m) => m[1].trim())
+      // A selector that carries a preceding comment is still that selector.
+      .map((selector) => selector.split('*/').pop()!.trim())
       .filter((selector) => !FOCUS_HANDLED_BY_PARENT.includes(selector))
     expect(stripped).toEqual([])
     // And the two focus-within replacements must actually exist.

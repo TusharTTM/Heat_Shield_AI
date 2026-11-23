@@ -75,7 +75,7 @@ export function HydrationReminder() {
     </div>
     <button type="button" className="hydration-toast-done" onClick={acknowledge}>{t('toast.done')}</button>
     <button type="button" className="hydration-toast-close" onClick={acknowledge} aria-label={t('toast.dismiss')}>
-      <X size={15} aria-hidden="true" />
+      <X size={16} aria-hidden="true" />
     </button>
   </aside>
 }

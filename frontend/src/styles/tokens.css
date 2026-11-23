@@ -1,80 +1,92 @@
-/* Hallmark · shape: app screen · genre: editorial · theme: Nightfall (deal 1/3)
- * nav: edge-aligned masthead, wordmark + profile + city picker · signature: the current risk verdict cast as a glass plate
- * states: loading, empty, error, full · formwork: deep neutral canvas, electric cyan signal, soft radii, grain at 3%
- * axes: mid/display-condensed/cool · posture: restrained · contrast: pass · v3.0.0 */
+/* Hallmark · shape: app screen · genre: advisory · theme: Kiln (deal 2/3)
+ * nav: edge-aligned masthead, wordmark + profile + city picker · signature: the 3px hazard rule on the verdict plate
+ * states: loading, empty, error, full · formwork: warm graphite, brass signal, hazard ramp carries all colour
+ * axes: mid/display-condensed/warm · posture: restrained · contrast: pass · v4.0.0 */
 
-/* HeatShield tokens — Nightfall, deep glass.
+/* HeatShield tokens — Kiln, warm graphite.
  * Every colour and face on the site resolves here. Nothing below this block
  * may carry a literal colour or a font stack.
  *
- * Dark-first. Surfaces are a cool near-black; text is light. Two ink roles keep
+ * The world is the instrument panel and the printed heat advisory: warm paper
+ * stock under a dark film, brass lamps, a masthead rule. Heat is warm, so a
+ * cool blue-grey chrome fights its own subject. The ramp is therefore tinted
+ * warm (hue 72) and the lightest brass is the one signal colour.
+ *
+ * Dark-first. Surfaces are a warm near-black; text is light. Two ink roles keep
  * filled chips readable without inverting the whole page:
  *   --ink       light, for text on the dark surfaces
  *   --plate-ink deep, for text on light or saturated fills
  *
  * Contrast, measured against the surfaces each value actually sits on:
- *   ink 18.0:1 on paper, 16.8:1 on paper-2, 16.0:1 on plate
- *   ink-2 14.0 / 13.1 / 12.4   muted 8.4 / 7.9 / 7.5
- *   accent-text 11.9 / 11.1 / 10.6 — body-size links, well over the 4.5 floor
- *   every filled chip carries plate-ink at 5.7:1 or better
- *   risk ramp: state text on its own soft surface is 5.9-8.3:1
- *   accent and the warning state sit 31.5 dE apart in OKLab, so the product
- *   accent is never mistaken for a hazard colour.
+ *   ink 17.4:1 on paper, 16.0:1 on paper-2, 15.1:1 on plate
+ *   ink-2 13.6 / 12.6 / 11.8   muted 8.2 / 7.5 / 7.1
+ *   accent-text 13.1 / 12.0 / 11.3 — body-size links, well over the 4.5 floor
+ *   every filled chip carries plate-ink at 4.8:1 or better
+ *   risk ramp: state text on its own soft surface is 6.6-9.6:1
+ *   accent and the warning state sit 15.7 dE apart in OKLab, and the nearest
+ *   hazard (watch) is 14.8 dE away, so the accent is never read as a hazard.
+ *
+ * Hazard hues are spread across the warm wheel on purpose: low mint 152,
+ * watch chartreuse 118, warning ember 32, severe crimson 12. The accent sits
+ * at 50 between warning and watch but far enough from both in lightness and
+ * chroma to stay distinct.
  */
 
 :root {
   color-scheme: dark;
 
-  /* Canvas: three depths of cool near-black. A recessed band sits one clear
+  /* Canvas: three depths of warm near-black. A recessed band sits one clear
    * step below the page so a ruled section reads as inset, not as a tint. */
-  --paper: oklch(14.5% 0.013 258);
-  --paper-2: oklch(19% 0.015 258);
-  --paper-3: oklch(24% 0.017 258);
+  --paper: oklch(16.5% 0.012 72);
+  --paper-2: oklch(21% 0.014 72);
+  --paper-3: oklch(26% 0.016 72);
 
   /* Plate: the raised surface a card or a menu sits on. */
-  --plate: oklch(21.5% 0.015 258);
-  --plate-2: oklch(26.5% 0.017 258);
+  --plate: oklch(23.5% 0.013 72);
+  --plate-2: oklch(29% 0.015 72);
   /* Text that sits on a light or saturated fill. Deep, not light: a dark theme
    * puts light text on the page and dark text on the chips. */
-  --plate-ink: oklch(16% 0.012 258);
+  --plate-ink: oklch(17% 0.012 72);
 
   /* Ink. Light on the dark canvas. */
-  --ink: oklch(96.8% 0.005 258);
-  --ink-2: oklch(88.5% 0.011 258);
-  --muted: oklch(73.5% 0.017 258);
+  --ink: oklch(96.5% 0.012 85);
+  --ink-2: oklch(88.5% 0.014 82);
+  --muted: oklch(73.5% 0.018 78);
 
-  /* Hairlines. Low-chroma so they read as glass edges, not as borders. */
-  --rule: oklch(32% 0.016 258);
-  --rule-2: oklch(42% 0.018 258);
+  /* Hairlines. Low-chroma so they read as a hairline, not as a border. */
+  --rule: oklch(33% 0.015 72);
+  --rule-2: oklch(43% 0.017 72);
   --rule-hair: 1px;
   --rule-bar: 3px;
 
-  /* The one signal colour: electric cyan. */
-  --accent: oklch(78% 0.145 195);
-  --accent-ink: oklch(16% 0.012 258);
-  --accent-deep: oklch(60% 0.13 195);
-  --accent-text: oklch(82% 0.135 195);
-  --accent-soft: oklch(29% 0.05 195);
-  --focus: oklch(87% 0.15 195);
+  /* The one signal colour: brass. Chosen at hue 50 so it clears every hazard
+   * state by at least 14.8 dE while staying inside the warm world. */
+  --accent: oklch(84% 0.14 50);
+  --accent-ink: oklch(17% 0.012 72);
+  --accent-deep: oklch(66% 0.14 44);
+  --accent-text: oklch(88.5% 0.125 75);
+  --accent-soft: oklch(28% 0.05 50);
+  --focus: oklch(88% 0.14 80);
 
-  /* Hazard ramp. Four states, each a distinct hue family so no two read alike:
-   * low = mint, watch = gold, warning = ember, severe = crimson. All lifted in
-   * lightness so they glow against the dark canvas. */
-  --risk-low: oklch(78% 0.16 158);
-  --risk-low-soft: oklch(29% 0.055 158);
-  --risk-low-text: oklch(84% 0.15 158);
+  /* Hazard ramp. Four states, each its own hue family so no two read alike:
+   * low = mint, watch = chartreuse, warning = ember, severe = crimson. Hues are
+   * spread 12/32/118/152 so the four never merge under colour blindness or low
+   * light, and all are lifted in lightness to sit against a warm near-black. */
+  --risk-low: oklch(78% 0.15 152);
+  --risk-low-soft: oklch(28% 0.05 152);
+  --risk-low-text: oklch(84% 0.14 152);
 
-  --risk-watch: oklch(82% 0.15 88);
-  --risk-watch-soft: oklch(30% 0.05 88);
-  --risk-watch-text: oklch(87% 0.14 88);
+  --risk-watch: oklch(86% 0.15 118);
+  --risk-watch-soft: oklch(30% 0.055 118);
+  --risk-watch-text: oklch(88% 0.13 118);
 
-  --risk-warning: oklch(72% 0.17 45);
-  --risk-warning-soft: oklch(31% 0.06 45);
-  --risk-warning-text: oklch(82% 0.14 50);
+  --risk-warning: oklch(68% 0.17 32);
+  --risk-warning-soft: oklch(30% 0.065 32);
+  --risk-warning-text: oklch(80% 0.13 36);
 
-  --risk-severe: oklch(66% 0.2 22);
-  --risk-severe-soft: oklch(30% 0.07 22);
-  --risk-severe-text: oklch(80% 0.15 22);
+  --risk-severe: oklch(62% 0.19 12);
+  --risk-severe-soft: oklch(29% 0.07 12);
+  --risk-severe-text: oklch(78% 0.15 16);
 
   /* The state rule on the verdict plate; each .risk-* class sets it. */
   --state-colour: var(--rule-2);
@@ -91,12 +103,13 @@
   --red-text: var(--risk-severe-text);
 
   /* Informational surface: provenance, explanations, provenance strips.
-   * Deliberately a neutral blue-grey, not a fourth signal colour. */
-  --info: oklch(70% 0.1 250);
-  --info-strong: oklch(78% 0.1 250);
-  --info-soft: oklch(28.5% 0.03 250);
-  --info-border: oklch(40% 0.04 250);
-  --info-text: oklch(81% 0.09 250);
+   * Kept cool on purpose: it is the one surface that must never be mistaken
+   * for a hazard state, so it sits outside the warm wheel entirely. */
+  --info: oklch(72% 0.09 240);
+  --info-strong: oklch(80% 0.09 240);
+  --info-soft: oklch(28.5% 0.03 240);
+  --info-border: oklch(40% 0.04 240);
+  --info-text: oklch(82% 0.09 240);
 
   /* Legacy names kept so existing rules keep resolving through the system. */
   --background: var(--paper);
@@ -106,14 +119,19 @@
   --border-strong: var(--rule-2);
 
   /* Elevation. Dark interfaces cannot cast a black shadow onto a black page,
-   * so depth is a soft cool halo plus a hairline of light on the top edge. */
-  --shadow: 0 1px 0 0 oklch(100% 0 0 / 0.04) inset, 0 18px 40px -24px oklch(4% 0.02 258 / 0.9);
-  --shadow-interactive: 0 1px 0 0 oklch(100% 0 0 / 0.06) inset, 0 22px 48px -20px oklch(4% 0.02 258 / 0.95);
-  --shadow-glow: 0 0 0 1px oklch(78% 0.145 195 / 0.22), 0 26px 60px -28px oklch(6% 0.03 258 / 0.95);
+   * so depth is a hairline of light on the top edge plus one neutral drop.
+   * There is no coloured halo: depth comes from surface steps, not from glow. */
+  --shadow: 0 1px 0 0 oklch(100% 0 0 / 0.05) inset, 0 18px 40px -24px oklch(5% 0.015 72 / 0.9);
+  --shadow-interactive: 0 1px 0 0 oklch(100% 0 0 / 0.07) inset, 0 22px 48px -20px oklch(5% 0.015 72 / 0.95);
+  /* Kept as a name for the floating panels; it is a neutral lift, not a glow. */
+  --shadow-float: 0 0 0 1px oklch(100% 0 0 / 0.03), 0 26px 60px -28px oklch(6% 0.02 72 / 0.95);
 
-  /* Shape. Soft, modern: 14px plates, 10px controls, full pills. */
+  /* Shape. Radius follows size, so nothing is a pill by habit: 6px on small
+   * tags and icon tiles, 10px on controls, 14px on plates, and the pill only
+   * where the element really is one (a switch track, a chip, a toast). */
   --radius: 14px;
   --radius-control: 10px;
+  --radius-tag: 6px;
   --radius-pill: 999px;
 
   /* Guidance strip aliases. */
@@ -126,10 +144,6 @@
   --font-body: "Archivo", ui-sans-serif, sans-serif;
   --font-outlier: "Archivo Narrow", ui-sans-serif, system-ui, sans-serif;
 
-  --texture-opacity: 0.025;
-  /* One 64px grain tile, inlined so it costs no request and never parses as a
-   * colour. Fractal noise at low opacity over the concrete. */
-  --grain: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter><rect width="64" height="64" filter="url(%23n)"/></svg>');
   --tracking-display: -0.005em;
   --display-weight: 700;
 
@@ -158,40 +172,39 @@
   --text-3xl: 2rem;
   --text-4xl: 2.5rem;
 
-  /* Motion. One spring-ish curve for things that arrive, one for things that
-   * leave, and a shared duration ladder so translations stay in step. */
+  /* Motion. One easing curve for the whole interface, and a shared duration
+   * ladder so translations stay in step. No overshoot: a spring that bounces
+   * reads as decoration, and layout properties are never animated. */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-  --ease-in: cubic-bezier(0.55, 0, 0.75, 0.2);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
-  --ease-spring: cubic-bezier(0.34, 1.32, 0.64, 1);
   --dur-micro: 140ms;
   --dur-short: 240ms;
   --dur-medium: 380ms;
   --dur-long: 560ms;
 
   /* Layout. */
-  --container: 1180px;
+  --container: 1440px;
   --gutter: 32px;
   --gap: 24px;
 
-  /* Dashboard palette: the same dark canvas with glass reading cards.
+  /* Dashboard palette: the same canvas with reading cards.
    * Cards are a lifted plate, not a light panel — the screens stay one theme. */
-  --dashboard-canvas: oklch(14.5% 0.013 258);
-  --dashboard-canvas-raised: oklch(18.5% 0.015 258);
-  --dashboard-canvas-edge: oklch(24% 0.017 258);
-  --dashboard-canvas-rule: oklch(31% 0.016 258);
-  --dashboard-canvas-rule-strong: oklch(44% 0.018 258);
-  --dashboard-on-canvas: oklch(96.8% 0.005 258);
-  --dashboard-on-canvas-soft: oklch(88.5% 0.011 258);
-  --dashboard-on-canvas-muted: oklch(73.5% 0.017 258);
-  --dashboard-card: oklch(20.5% 0.014 258);
-  --dashboard-card-hover: oklch(25% 0.016 258);
-  --dashboard-card-ink: oklch(96.8% 0.005 258);
-  --dashboard-card-ink-2: oklch(88.5% 0.011 258);
-  --dashboard-card-muted: oklch(73.5% 0.017 258);
-  --dashboard-card-rule: oklch(32% 0.016 258);
-  --dashboard-card-track: oklch(30% 0.016 258);
-  --dashboard-focus: oklch(87% 0.15 195);
+  --dashboard-canvas: oklch(16.5% 0.012 72);
+  --dashboard-canvas-raised: oklch(20% 0.014 72);
+  --dashboard-canvas-edge: oklch(26% 0.016 72);
+  --dashboard-canvas-rule: oklch(32% 0.015 72);
+  --dashboard-canvas-rule-strong: oklch(45% 0.017 72);
+  --dashboard-on-canvas: oklch(96.5% 0.012 85);
+  --dashboard-on-canvas-soft: oklch(88.5% 0.014 82);
+  --dashboard-on-canvas-muted: oklch(73.5% 0.018 78);
+  --dashboard-card: oklch(22.5% 0.013 72);
+  --dashboard-card-hover: oklch(27% 0.015 72);
+  --dashboard-card-ink: oklch(96.5% 0.012 85);
+  --dashboard-card-ink-2: oklch(88.5% 0.014 82);
+  --dashboard-card-muted: oklch(73.5% 0.018 78);
+  --dashboard-card-rule: oklch(33% 0.015 72);
+  --dashboard-card-track: oklch(31% 0.015 72);
+  --dashboard-focus: oklch(88% 0.14 80);
 
   /* Layers. */
   --z-base: 1;

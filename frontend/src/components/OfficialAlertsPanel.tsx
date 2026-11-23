@@ -14,7 +14,7 @@ function OfficialAlertCard({ alert }: { alert: OfficialAlertItem }) {
     <div className="official-cap-instruction"><strong>Instructions in the CAP message</strong><p>{alert.instruction ?? 'No instruction was included in this CAP information block. Follow the issuing authority and local disaster-management guidance.'}</p></div>
     <dl className="official-cap-times"><div><dt>Issued</dt><dd>{alert.sent ? <time dateTime={alert.sent}>{formatWeatherTime(alert.sent)} IST</time> : 'Not supplied'}</dd></div><div><dt>Effective / onset</dt><dd>{alert.onset ?? alert.effective ? <time dateTime={alert.onset ?? alert.effective ?? undefined}>{formatWeatherTime(alert.onset ?? alert.effective ?? '')} IST</time> : 'Not supplied'}</dd></div><div><dt>Expires</dt><dd>{alert.expires ? <time dateTime={alert.expires}>{formatWeatherTime(alert.expires)} IST</time> : 'Not supplied'}</dd></div></dl>
     <p className="official-match-note"><strong>Location match:</strong> {alert.matchExplanation}{alert.matchedArea ? ` Matched area: ${alert.matchedArea}.` : ''}</p>
-    <div className="official-card-links"><a href={alert.sourceUrl} rel="external">Original CAP XML <ArrowUpRight size={14} aria-hidden="true" /></a><span>CAP retrieved {formatWeatherTime(alert.retrievedAt)} IST</span></div>
+    <div className="official-card-links"><a href={alert.sourceUrl} rel="external">Original CAP XML <ArrowUpRight size={16} aria-hidden="true" /></a><span>CAP retrieved {formatWeatherTime(alert.retrievedAt)} IST</span></div>
   </article>
 }
 
@@ -25,13 +25,13 @@ export function OfficialAlertsPanel({ state }: { state: OfficialSourceState<Offi
     {state.status === 'unconfigured' && <div className="official-warning-empty">
       <strong>Official warnings are not being retrieved right now</strong>
       <p className="official-warning-lead"><strong>An empty panel here never means your area has no warnings.</strong> Check India’s official portal directly.</p>
-      <a className="button button-secondary" href="https://sachet.ndma.gov.in/" rel="external">Open NDMA SACHET <ExternalLink size={15} aria-hidden="true" /></a>
+      <a className="button button-secondary" href="https://sachet.ndma.gov.in/" rel="external">Open NDMA SACHET <ExternalLink size={16} aria-hidden="true" /></a>
       <details className="official-why-drawer">
         <summary>Why this panel is empty</summary>
         <div className="plain-language-callout">Live government alerts need a server connection that this public site does not have. This says nothing about whether warnings exist for your area — check the NDMA SACHET portal before you travel.</div>
       </details>
     </div>}
-    {state.status === 'loading' && <p className="official-loading" role="status"><BellRing size={19} aria-hidden="true" />Retrieving and validating official CAP messages…</p>}
+    {state.status === 'loading' && <p className="official-loading" role="status"><BellRing size={18} aria-hidden="true" />Retrieving and validating official CAP messages…</p>}
     {state.status === 'error' && <div className="official-warning-empty" role="alert"><strong>Official CAP feed unavailable</strong><p>{state.error}</p><p>No generated assessment is relabelled as an official warning, and no substitute alert is shown. Check SACHET directly.</p><div className="official-card-links"><a className="button button-secondary" href="https://sachet.ndma.gov.in/" rel="external">Open NDMA SACHET</a><button type="button" className="button button-secondary" onClick={state.refresh}>Retry official feed</button></div></div>}
     {state.status === 'ready' && data && <>
       {data.freshness === 'stale' && <InlineNotice kind="warning" title="Stored official CAP data">Live refresh is unavailable or incomplete. Alerts remain visible only until their own CAP expiry.</InlineNotice>}

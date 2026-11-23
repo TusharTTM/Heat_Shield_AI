@@ -90,6 +90,32 @@ describe('contrast', () => {
     }
   })
 
+  it('keeps the accent clear of every hazard, not only the warning state', () => {
+    // Heat hazards occupy the whole warm wheel, so the accent only works if it
+    // is far enough from all four. The first candidate sat 4.1 dE from Warning.
+    // Measured in OKLab; 14 is the floor this palette was designed to.
+    const toOklab = (name: string) => {
+      const [r, g, b] = rgbOf(name)
+      const lin = (c: number) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4))
+      const R = lin(r), G = lin(g), B = lin(b)
+      const l = Math.cbrt(0.4122214708 * R + 0.5363325363 * G + 0.0514459929 * B)
+      const m = Math.cbrt(0.2119034982 * R + 0.6806995451 * G + 0.1073969566 * B)
+      const s = Math.cbrt(0.0883024619 * R + 0.2817188376 * G + 0.6299787005 * B)
+      return [
+        0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
+        1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
+        0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s,
+      ]
+    }
+    const rgbOf = (name: string) => oklchToRgb(token(name))
+    const a = toOklab('accent')
+    for (const hazard of ['risk-low', 'risk-watch', 'risk-warning', 'risk-severe']) {
+      const h = toOklab(hazard)
+      const dE = Math.hypot(a[0] - h[0], a[1] - h[1], a[2] - h[2]) * 100
+      expect(dE, `accent vs ${hazard} = ${dE.toFixed(1)} dE`).toBeGreaterThanOrEqual(14)
+    }
+  })
+
   it('keeps the product accent distinguishable from the warning state', () => {
     // The accent is orange and Warning is orange-brown; if they sit too close a
     // primary button reads as a hazard. 0.08 in OKLab lightness/chroma space is

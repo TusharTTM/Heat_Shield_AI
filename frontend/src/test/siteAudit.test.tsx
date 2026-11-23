@@ -49,7 +49,7 @@ describe('route audit', () => {
     renderApp('/alerts')
     expect(await screen.findByRole('heading', { name: 'Heat Shield dashboard for Mumbai' })).toBeInTheDocument()
     const notice = screen.getByRole('status')
-    expect(notice).toHaveTextContent('This page has moved.')
+    expect(notice).toHaveTextContent('This page has moved')
     // The path is named, so a shared link's recipient knows what happened.
     expect(notice).toHaveTextContent('/alerts')
   })
@@ -57,7 +57,7 @@ describe('route audit', () => {
   it('does not show the retired-URL notice on a live route', async () => {
     renderApp('/')
     await screen.findByRole('heading', { name: 'Heat Shield dashboard for Mumbai' })
-    expect(screen.queryByText('This page has moved.')).not.toBeInTheDocument()
+    expect(screen.queryByText('This page has moved')).not.toBeInTheDocument()
   })
 
   it('lets the reader dismiss the retired-URL notice', async () => {
@@ -65,13 +65,13 @@ describe('route audit', () => {
     renderApp('/safety')
     await screen.findByRole('heading', { name: 'Heat Shield dashboard for Mumbai' })
     await user.click(screen.getByRole('button', { name: 'Dismiss this notice' }))
-    expect(screen.queryByText('This page has moved.')).not.toBeInTheDocument()
+    expect(screen.queryByText('This page has moved')).not.toBeInTheDocument()
   })
 
   it('translates the retired-URL notice', async () => {
     localStorage.setItem('hs-settings-v1', JSON.stringify({ display: { language: 'hi' } }))
     renderApp('/forecast')
-    expect(await screen.findByText('यह पृष्ठ स्थानांतरित हो गया है।')).toBeInTheDocument()
+    expect(await screen.findByText('यह पृष्ठ स्थानांतरित हो गया है')).toBeInTheDocument()
     expect(screen.getByText(/\/forecast/)).toBeInTheDocument()
   })
 })

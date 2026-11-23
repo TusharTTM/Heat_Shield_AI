@@ -148,7 +148,7 @@ describe('language preference', () => {
     seedSettings({ display: { language: 'hi' } })
     renderAt('/')
     expect(await screen.findByRole('heading', { name: 'तापमान' })).toBeInTheDocument()
-    expect(screen.getByText('हीट शील्ड')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'हीट शील्ड' })).toBeInTheDocument()
     await waitFor(() => expect(document.title).toBe('डैशबोर्ड · Heat Shield AI'))
     expect(document.documentElement.lang).toBe('hi')
   })

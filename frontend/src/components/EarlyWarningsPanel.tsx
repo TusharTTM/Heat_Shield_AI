@@ -22,7 +22,7 @@ function WarningRow({ warning }: { warning: EarlyWarning }) {
   const Icon = TYPE_ICONS[warning.type]
   const hoursUntil = Math.max(0, Math.round((Date.parse(warning.onset) - Date.now()) / 3_600_000))
   return <li className={`early-warning-row risk-${warning.level}`}>
-    <span className="early-warning-icon"><Icon size={17} aria-hidden="true" /></span>
+    <span className="early-warning-icon"><Icon size={16} aria-hidden="true" /></span>
     <div className="early-warning-copy">
       <strong>{warning.title}</strong>
       <small>{warning.detail}</small>
