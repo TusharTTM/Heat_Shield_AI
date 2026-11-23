@@ -168,6 +168,15 @@ describe('design system', () => {
     expect(sheet).not.toMatch(/\{\s*\}/)
   })
 
+  it('never leaks the location in the URL to another origin', () => {
+    // Readings are per-city, so the document URL carries a location. GitHub
+    // Pages cannot set response headers, so the meta tag is the only lever.
+    const html = readFileSync('index.html', 'utf8')
+    expect(html).toMatch(/<meta name="referrer" content="strict-origin-when-cross-origin" \/>/)
+    // A looser value would send the full path, including coordinates.
+    expect(html).not.toMatch(/name="referrer" content="(?:unsafe-url|origin-when-cross-origin)"/)
+  })
+
   it('meets the Web Interface Guidelines checks a stylesheet can carry', () => {
     // Vercel's Web Interface Guidelines, as far as CSS can prove them. Each of
     // these was violated somewhere in the app when the guideline was adopted.

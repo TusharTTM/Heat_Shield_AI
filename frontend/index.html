@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#120e09" />
     <meta name="description" content="Heat Shield AI dashboard, assistant, and chat history." />
+    <!-- Reads are per-city, so the document URL carries a location. Send the
+         origin at most, never the path, on any cross-origin request.
+         GitHub Pages cannot set response headers, so this is the only lever. -->
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <!-- Weather and air-quality readings come straight from these origins; a warm
          connection saves a TLS handshake on the critical path. -->
