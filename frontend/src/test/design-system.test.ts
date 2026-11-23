@@ -114,6 +114,57 @@ describe('design system', () => {
 
   })
 
+  it('never hides a section except behind the class that can un-hide it', () => {
+    // The reveal's whole safety property: a section is only held out of view
+    // under `.is-reveal-ready`, which useScrollReveal adds itself, in the same
+    // effect that attaches the observer. An unscoped `.scroll-section {
+    // opacity: 0 }` would leave a script-less or failed load with a blank page.
+    // Comments are stripped first. The reveal's own comment explains the
+    // class by name, and a selector regex that swallows it "finds"
+    // is-reveal-ready in an unscoped rule and passes when it should fail.
+    const bare = sheet.replace(/\/\*[\s\S]*?\*\//g, '')
+    const blocks = [...bare.matchAll(/([^{}]*\.scroll-section[^{}]*)\{([^}]*)\}/g)]
+      .map(([, selector, body]) => [selector.split('}').pop() ?? selector, body] as const)
+    expect(blocks.length).toBeGreaterThan(0)
+    for (const [selector, body] of blocks) {
+      const hides = /opacity:\s*0(?![.\d])/.test(body) || /visibility:\s*hidden/.test(body)
+      if (hides) expect(selector.trim(), `unscoped hidden state: ${selector.trim()}`).toContain('is-reveal-ready')
+    }
+  })
+
+  it('keeps the reveal to transform and opacity, never layout', () => {
+    // Animating height/margin/filter would reflow every section on the page.
+    const reveal = [...sheet.matchAll(/\.is-reveal-ready \.scroll-section[^{]*\{([^}]*)\}/g)]
+      .map((m) => m[1])
+      .join('\n')
+    expect(reveal).toContain('transform: translateY(')
+    expect(reveal).not.toMatch(/(?:^|;)\s*(?:height|margin|padding|width|top|left|filter|box-shadow):/)
+  })
+
+  it('reveals the readings grid as one sheet, not card by card', () => {
+    // The tiles carry half-borders that only form a sheet when flush. A
+    // staggered or lifted tile opens a seam onto the page background.
+    expect(sheet).toMatch(/\.is-reveal-ready \.key-readings-grid > \* \{[^}]*opacity:\s*1/)
+    expect(sheet).toMatch(/\.is-reveal-ready \.key-readings-grid > \* \{[^}]*transition:\s*none/)
+  })
+
+  it('turns the reveal off entirely, not just faster, under reduced motion', () => {
+    // Collapsing the duration leaves below-fold sections at opacity 0 until an
+    // observer fires. That pops, and it leaves the page incomplete for anyone
+    // who never scrolls. Verified in a real browser: 0 sections hidden.
+    const reduced = [...sheet.matchAll(/@media \(prefers-reduced-motion: reduce\)\s*\{([\s\S]*?)\n\}/g)]
+      .map((m) => m[1])
+      .join('\n')
+    expect(reduced).toMatch(/\.is-reveal-ready \.scroll-section[^{]*\{[^}]*opacity:\s*1/)
+    expect(reduced).toMatch(/\.is-reveal-ready \.scroll-section[^{]*\{[^}]*transform:\s*none/)
+  })
+
+  it('prints every section even when the page was scrolled to the top', () => {
+    const print = [...sheet.matchAll(/@media print\s*\{([\s\S]*?)\n\}/g)].map((m) => m[1]).join('\n')
+    expect(print).toMatch(/\.is-reveal-ready \.scroll-section[^{]*\{[^}]*opacity:\s*1/)
+    expect(print).toMatch(/\.is-reveal-ready \.scroll-section[^{]*\{[^}]*transition:\s*none/)
+  })
+
   it('has no stylesheet rule for a class the app stopped rendering', () => {
     // Deleting a component leaves its rules behind; that is exactly how the
     // retired nav, map scene and planner cards survived two redesigns. Classes

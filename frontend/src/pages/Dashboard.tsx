@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { useScrollReveal } from '../hooks/useScrollReveal'
 import { CityPicker } from '../components/CityPicker'
 import { DayPlanner } from '../components/DayPlanner'
 import { EarlyWarningsPanel } from '../components/EarlyWarningsPanel'
@@ -73,7 +74,9 @@ export default function Dashboard() {
     })
   }
 
-  return <div className="uploaded-dashboard">
+  useScrollReveal()
+
+  return <div className="uploaded-dashboard" data-scroll-reveal>
     <h1 className="sr-only">{t('dash.dashboardFor', { city: weather?.name ?? selected.name })}</h1>
 
     <header className="dashboard-topbar">
@@ -91,7 +94,7 @@ export default function Dashboard() {
       </div>
     </header>
 
-    <div className="dashboard-overview">
+    <div className="scroll-section dashboard-overview">
       <div className="dashboard-overview-copy">
         <p>{t('dash.lead')}</p>
       </div>
@@ -105,14 +108,14 @@ export default function Dashboard() {
         is the top answer, because "no official warning" is not the same as
         "nothing to do". Either way the two are never merged into one claim. */}
     {latestOfficialAlert && (
-      <div id="official-warnings" className="dashboard-official-warnings is-urgent">
+      <div id="official-warnings" className="scroll-section dashboard-official-warnings is-urgent">
         <OfficialAlertsPanel state={officialAlerts} />
       </div>
     )}
 
     <section
       id="situation-alert"
-      className={`uploaded-alert risk-${primaryRisk.level ?? 'unavailable'}`}
+      className={`scroll-section uploaded-alert risk-${primaryRisk.level ?? 'unavailable'}`}
       aria-label="Official warnings versus model screening"
       aria-labelledby="overall-screening-title"
     >
@@ -139,12 +142,12 @@ export default function Dashboard() {
     </section>
 
     {!latestOfficialAlert && (
-      <div id="official-warnings" className="dashboard-official-warnings">
+      <div id="official-warnings" className="scroll-section dashboard-official-warnings">
         <OfficialAlertsPanel state={officialAlerts} />
       </div>
     )}
 
-    <section className="upcoming-risk" aria-labelledby="upcoming-risk-title">
+    <section className="scroll-section upcoming-risk" aria-labelledby="upcoming-risk-title">
       <div className="upcoming-risk-heading">
         <span className="uploaded-eyebrow">{t('dash.upcoming')}</span>
         <h2 id="upcoming-risk-title">{t('dash.upcomingTitle')}</h2>
@@ -153,11 +156,11 @@ export default function Dashboard() {
       <DayPlanner />
     </section>
 
-    <div className="dashboard-section-heading">
+    <div className="scroll-section dashboard-section-heading">
       <div><h2>{t('dash.conditions')}</h2></div>
       <span>{t('dash.weatherAir')}</span>
     </div>
-    <section className="key-readings-grid" aria-label="Dashboard readings and shortcuts">
+    <section className="scroll-section key-readings-grid" aria-label="Dashboard readings and shortcuts">
       <MetricCard icon={Thermometer} title={t('metric.temperature')} value={weather ? formatTemp(weather.temperature) : '—'} unit={weather ? tempSymbol : undefined} detail={t('metric.modelAirTemp')} to="/metric/temperature" newTab />
       <MetricCard icon={Flame} title={t('metric.heatIndex')} value={weather ? formatTemp(weather.heatIndex) : '—'} unit={weather ? tempSymbol : undefined} detail={weather ? t('metric.feelsLike', { value: `${formatTemp(weather.apparentTemperature)}${tempSymbol}` }) : t('metric.notAssessed')} risk={heat?.level} to="/metric/heat-index" newTab />
       <MetricCard icon={Droplets} title={t('metric.humidity')} value={weather ? String(weather.humidity) : '—'} unit={weather ? '%' : undefined} detail={t('metric.relativeHumidity')} to="/metric/humidity" newTab />
@@ -176,7 +179,7 @@ export default function Dashboard() {
 
     {/* Navigation, not readings: kept out of the weather grid so the tiles
         above stay a single glanceable set of measurements. */}
-    <nav className="dashboard-shortcuts" aria-label={t('dash.shortcuts')}>
+    <nav className="scroll-section dashboard-shortcuts" aria-label={t('dash.shortcuts')}>
       <Link to="/assistant" className="dashboard-shortcut">
         <MessageCircle size={18} aria-hidden="true" />
         <span>{t('metric.assistant')}</span>
@@ -191,7 +194,7 @@ export default function Dashboard() {
       )}
     </nav>
 
-    <section className="uploaded-panel" aria-labelledby="dashboard-suggestions-title">
+    <section className="scroll-section uploaded-panel" aria-labelledby="dashboard-suggestions-title">
       <div className="uploaded-panel-heading">
         <div>
           <span className="uploaded-eyebrow">{t('dash.suggestionsKicker')}</span>
