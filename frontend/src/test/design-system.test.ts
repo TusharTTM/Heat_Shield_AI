@@ -165,6 +165,33 @@ describe('design system', () => {
     expect(print).toMatch(/\.is-reveal-ready \.scroll-section[^{]*\{[^}]*transition:\s*none/)
   })
 
+  it('never leaves the frame offset on a settled intro phase', () => {
+    // The base `.brand-intro-copy` rule carries the entrance lift. A phase that
+    // declares only `opacity` silently falls back to that lift, and the wordmark
+    // dropped 10px at the handover — the exact jump the intro must not have.
+    // Every phase where the copy is at rest must cancel the transform.
+    for (const p of ['enter', 'merge', 'land']) {
+      const rule = new RegExp(`\\.brand-intro\\[data-phase='${p}'\\] \\.brand-intro-copy \\{[^}]*\\}`)
+      const found = sheet.match(rule)
+      expect(found, `missing rule for ${p}`).not.toBeNull()
+      expect(found![0], `phase ${p} lets the entrance lift through`).toMatch(/transform:\s*none/)
+    }
+  })
+
+  it('cross-fades the copy in place instead of fading it mid-flight', () => {
+    // Fading during the travel makes the wordmark dissolve on its way and the
+    // page brand pop in — the merge reads as a cut, not a landing. The travel
+    // phase must keep the copy opaque; only the landed phase fades it.
+    const merge = sheet.match(/\.brand-intro\[data-phase='merge'\] \.brand-intro-copy \{[^}]*\}/)
+    expect(merge?.[0]).toMatch(/opacity:\s*1/)
+  })
+
+  it('lays the copy out as a grid item, not a line box', () => {
+    // As a block child the inline-flex copy is pushed down by the inherited
+    // half-leading, which put it 10px below the brand at every breakpoint.
+    expect(sheet).toMatch(/\.brand-intro-stage \{[^}]*display:\s*grid/)
+  })
+
   it('has no stylesheet rule for a class the app stopped rendering', () => {
     // Deleting a component leaves its rules behind; that is exactly how the
     // retired nav, map scene and planner cards survived two redesigns. Classes

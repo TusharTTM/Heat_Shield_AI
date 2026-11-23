@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
+import { BrandIntro } from './components/BrandIntro'
 import { Layout } from './components/Layout'
 import { SettingsProvider } from './context/SettingsContext'
 import Dashboard from './pages/Dashboard'
@@ -26,6 +27,7 @@ function RouteFallback() {
 
 export default function App() {
   return <SettingsProvider>
+    <BrandIntro />
     <Routes>
       <Route element={<Layout />}>
         <Route index element={<Dashboard />} />

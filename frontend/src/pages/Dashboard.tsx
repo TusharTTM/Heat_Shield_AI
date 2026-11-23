@@ -79,7 +79,9 @@ export default function Dashboard() {
   return <div className="uploaded-dashboard" data-scroll-reveal>
     <h1 className="sr-only">{t('dash.dashboardFor', { city: weather?.name ?? selected.name })}</h1>
 
-    <header className="dashboard-topbar">
+    {/* The intro measures this header before it starts. See the dependency
+        comment in BrandIntro: the brand must be in its final box first. */}
+    <header className="dashboard-topbar" data-intro-landmark>
       <Link to="/" className="dashboard-brand" aria-label={t('dash.brandName')}>
         <span className="dashboard-brand-mark"><ShieldCheck size={22} aria-hidden="true" /></span>
         {/* The accent lands on "Heat", the word that carries the meaning. It
