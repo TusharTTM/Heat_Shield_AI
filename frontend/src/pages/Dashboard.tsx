@@ -103,29 +103,54 @@ export default function Dashboard() {
       <div className="dashboard-location-row"><CityPicker /></div>
     </div>
 
-    {(warning || airWarning) && <p className="dashboard-stale-note" role="status">{warning ?? airWarning}</p>}
-
-    {/* The order is the answer, most important first:
-     *
-     *   1. the screening verdict (and an active official warning above it);
-     *   2. what to actually do about it — the precautions;
-     *   3. the plan for the coming hours;
-     *   4. the readings those three are derived from;
-     *   5. navigation and secondary links last.
-     *
-     * The readings used to sit above the precautions. That is the wrong way
-     * round: a reading is the evidence behind a verdict, not the verdict, and a
-     * visitor who stops after one screen should have the actions, not five
-     * numbers they have to interpret themselves.
-     *
-     * When an official warning is active it leads even the verdict, and the two
-     * are never merged into one claim — "no official warning" is not the same as
-     * "nothing to do". */}
     {latestOfficialAlert && (
       <div id="official-warnings" className="scroll-section dashboard-official-warnings is-urgent">
         <OfficialAlertsPanel state={officialAlerts} />
       </div>
     )}
+
+    <div className="scroll-section dashboard-section-heading">
+      <div><h2>{t('dash.conditions')}</h2></div>
+      <span>{t('dash.weatherAir')}</span>
+    </div>
+    <section className="scroll-section key-readings-grid" aria-label="Dashboard readings and shortcuts">
+      <MetricCard icon={Thermometer} title={t('metric.temperature')} value={weather ? formatTemp(weather.temperature) : '—'} unit={weather ? tempSymbol : undefined} detail={t('metric.modelAirTemp')} to="/metric/temperature" newTab />
+      <MetricCard icon={Flame} title={t('metric.heatIndex')} value={weather ? formatTemp(weather.heatIndex) : '—'} unit={weather ? tempSymbol : undefined} detail={weather ? t('metric.feelsLike', { value: `${formatTemp(weather.apparentTemperature)}${tempSymbol}` }) : t('metric.notAssessed')} risk={heat?.level} to="/metric/heat-index" newTab />
+      <MetricCard icon={Droplets} title={t('metric.humidity')} value={weather ? String(weather.humidity) : '—'} unit={weather ? '%' : undefined} detail={t('metric.relativeHumidity')} to="/metric/humidity" newTab />
+      <MetricCard icon={Sun} title={t('metric.uvIndex')} value={today?.uvIndexMax == null ? '—' : today.uvIndexMax.toFixed(1)} unit={today?.uvIndexMax == null ? undefined : 'max'} detail={t('metric.dailyMax')} to="/metric/uv-index" newTab />
+      <MetricCard
+        icon={CloudSun}
+        title={t('metric.airQuality')}
+        value={primaryAqi ? primaryAqi.value.toFixed(0) : airStatus === 'loading' ? '…' : '—'}
+        unit={primaryAqi?.label}
+        detail={primaryAqi ? `${primaryAqi.category} · CAMS model` : airAssessment ? 'Modelled AQI unavailable' : t('metric.notAssessed')}
+        risk={airAssessment?.level}
+        to="/metric/air-quality"
+        newTab
+      />
+    </section>
+
+    {(warning || airWarning) && <p className="dashboard-stale-note" role="status">{warning ?? airWarning}</p>}
+
+    {/* Order, top to bottom: the numbers first, then what they mean.
+     *
+     *   1. the readings (temperature, heat index, humidity, UV, air) — the
+     *      detail people open a heat dashboard to see;
+     *   2. the screening verdict, and an active official warning above it;
+     *   3. what to do about it — the precautions;
+     *   4. the plan for the coming hours;
+     *   5. navigation and secondary links last.
+     *
+     * An earlier revision put the verdict above the readings on the theory that
+     * a visitor who stops after one screen should have the actions. The readings
+     * are what the visitor came for: every number on the sheet is a check they
+     * can make against their own body and their own window, before they trust
+     * anything the model says about them. The verdict follows immediately so it
+     * still lands on the first screen on a laptop.
+     *
+     * When an official warning is active it leads even the verdict, and the two
+     * are never merged into one claim — "no official warning" is not the same as
+     * "nothing to do". */}
 
     <section
       id="situation-alert"
@@ -192,27 +217,6 @@ export default function Dashboard() {
       </div>
       <EarlyWarningsPanel />
       <DayPlanner />
-    </section>
-
-    <div className="scroll-section dashboard-section-heading">
-      <div><h2>{t('dash.conditions')}</h2></div>
-      <span>{t('dash.weatherAir')}</span>
-    </div>
-    <section className="scroll-section key-readings-grid" aria-label="Dashboard readings and shortcuts">
-      <MetricCard icon={Thermometer} title={t('metric.temperature')} value={weather ? formatTemp(weather.temperature) : '—'} unit={weather ? tempSymbol : undefined} detail={t('metric.modelAirTemp')} to="/metric/temperature" newTab />
-      <MetricCard icon={Flame} title={t('metric.heatIndex')} value={weather ? formatTemp(weather.heatIndex) : '—'} unit={weather ? tempSymbol : undefined} detail={weather ? t('metric.feelsLike', { value: `${formatTemp(weather.apparentTemperature)}${tempSymbol}` }) : t('metric.notAssessed')} risk={heat?.level} to="/metric/heat-index" newTab />
-      <MetricCard icon={Droplets} title={t('metric.humidity')} value={weather ? String(weather.humidity) : '—'} unit={weather ? '%' : undefined} detail={t('metric.relativeHumidity')} to="/metric/humidity" newTab />
-      <MetricCard icon={Sun} title={t('metric.uvIndex')} value={today?.uvIndexMax == null ? '—' : today.uvIndexMax.toFixed(1)} unit={today?.uvIndexMax == null ? undefined : 'max'} detail={t('metric.dailyMax')} to="/metric/uv-index" newTab />
-      <MetricCard
-        icon={CloudSun}
-        title={t('metric.airQuality')}
-        value={primaryAqi ? primaryAqi.value.toFixed(0) : airStatus === 'loading' ? '…' : '—'}
-        unit={primaryAqi?.label}
-        detail={primaryAqi ? `${primaryAqi.category} · CAMS model` : airAssessment ? 'Modelled AQI unavailable' : t('metric.notAssessed')}
-        risk={airAssessment?.level}
-        to="/metric/air-quality"
-        newTab
-      />
     </section>
 
     {/* Navigation, not readings: kept out of the weather grid so the tiles

@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { readFileSync } from 'node:fs'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
@@ -43,10 +44,11 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks())
 
 describe('Uploaded Heat Shield dashboard', () => {
-  it('puts the most important thing first, and the readings below the actions', async () => {
-    // Order is part of the product, not styling. A visitor who reads one screen
-    // should get the verdict and what to do about it — not five numbers they
-    // have to interpret themselves.
+  it('leads with the readings, then what they mean', async () => {
+    // Order is part of the product. The readings are the detail a visitor opens a
+    // heat dashboard for — every one of them is a check they can make against
+    // their own body before they trust a model's verdict. The verdict follows
+    // immediately, so it still lands on the first screen on a laptop.
     renderDashboard()
     expect(await screen.findByRole('heading', { name: 'Temperature' })).toBeInTheDocument()
 
@@ -57,27 +59,42 @@ describe('Uploaded Heat Shield dashboard', () => {
       (el) => (el.id || el.className.replace('scroll-section', '').replace('is-revealed', '').trim()).replace(/\s+/g, ' '),
     )
     const at = (needle: string) => docOrder.findIndex((k) => k.includes(needle))
+    const overview = at('dashboard-overview')
+    const readings = at('key-readings-grid')
     const verdict = at('situation-alert')
     const suggestions = at('uploaded-panel')
     const plan = at('upcoming-risk')
-    const readings = at('key-readings-grid')
     const shortcuts = at('dashboard-shortcuts')
-    const overview = at('dashboard-overview')
 
-    for (const i of [verdict, suggestions, plan, readings, shortcuts]) expect(i).toBeGreaterThanOrEqual(0)
+    for (const i of [overview, readings, verdict, suggestions, plan, shortcuts]) expect(i).toBeGreaterThanOrEqual(0)
 
-    // 1. The page title and city picker stay at the top; the verdict is the
-    //    first thing with substance on it.
+    // 1. The title and city picker, then the readings immediately.
     expect(overview).toBe(0)
-    expect(verdict).toBe(overview + 1)
-    // 2. Then what to do about it.
+    expect(readings).toBeGreaterThan(overview)
+    // 2. The verdict on those readings.
+    expect(verdict).toBeGreaterThan(readings)
+    // 3. Then what to do about it.
     expect(suggestions).toBeGreaterThan(verdict)
-    // 3. Then the plan for the coming hours.
+    // 4. Then the plan for the coming hours.
     expect(plan).toBeGreaterThan(suggestions)
-    // 4. The readings are the evidence behind those three, so they follow.
-    expect(readings).toBeGreaterThan(plan)
     // 5. Navigation last.
-    expect(shortcuts).toBeGreaterThan(readings)
+    expect(shortcuts).toBeGreaterThan(plan)
+  })
+
+  it('keeps an active official warning above the readings in the markup', () => {
+    // A live CAP warning outranks anything the page derives itself, so the
+    // conditional urgent block must sit above the reading sheet. The test
+    // fixtures have no official feed configured, so this is asserted against the
+    // page source rather than a render — the branch would never mount here.
+    const source = readFileSync('src/pages/Dashboard.tsx', 'utf8')
+    const urgent = source.indexOf('{latestOfficialAlert && (')
+    const readings = source.indexOf('className="scroll-section dashboard-section-heading"')
+    const grid = source.indexOf('className="scroll-section key-readings-grid"')
+    for (const [name, index] of [['urgent block', urgent], ['readings heading', readings], ['readings grid', grid]] as const) {
+      expect(index, `${name} is missing from Dashboard.tsx`).toBeGreaterThan(-1)
+    }
+    expect(urgent).toBeLessThan(readings)
+    expect(readings).toBeLessThan(grid)
   })
 
   it('keeps the precautions out of the readings grid', async () => {

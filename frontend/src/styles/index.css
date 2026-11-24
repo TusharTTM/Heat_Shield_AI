@@ -345,20 +345,52 @@ td {
 /* Official vs model: two ruled columns, not two tinted chips. */
 /* --- Key readings --------------------------------------------------------- */
 
-/* Fluid columns, no breakpoints. Two terms decide the count:
- *   9.5rem                   the narrowest a tile may get (readable on a phone)
- *   (100% - 3 gaps) / 4      the width that would fit exactly four columns
- * The larger of the two is the track minimum, so the grid yields 1, 2, 3 or 4
- * columns from the space it actually has and can never exceed 4. Eight tiles
- * therefore fill 2x4 on any desktop instead of the ragged 5+3 that the old
- * repeat(5, ...) produced. A 3-column band around 540-660px leaves two tiles
- * on the last row; that is the grid responding to real width, not a breakpoint
- * artefact, and it is left-aligned like any grid. */
+/* Five readings, five columns: the sheet is one flush row of tiles, edge to
+ * edge, and every tile is the same size because every reading is the same kind
+ * of thing.
+ *
+ * The history here is worth keeping. This was `repeat(5, ...)` with a fixed
+ * count, then `auto-fit` with a calculated track minimum, then four tracks with
+ * the fifth tile stretched across the full width. All three were attempts to
+ * stop a partial row looking broken: five tiles over four tracks is 4 + 1, and
+ * that lone fifth left three empty cells either side of it. Stretching it to
+ * full width fixed the hole but made one reading a wide empty band, which reads
+ * as a different kind of thing from the other four. The count was never the
+ * problem — the ceiling of four was.
+ *
+ * So: five tracks while a tile can stay readable, then step down as a set. The
+ * readable floor is 150px (a figure and a two-line label). At the 1120px
+ * content cap that is a tile of 198px; the five-track row holds until about
+ * 890px, where tiles reach the floor and the count drops to three. */
 .key-readings-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(max(9.5rem, calc((100% - 3 * var(--space-4)) / 4)), 1fr));
-  gap: max(var(--space-4), calc((100% - 4 * 20rem) / 3));
-  justify-content: center;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--space-4);
+  justify-content: stretch;
+}
+
+/* Three columns between ~890px and ~600px: five over three splits 3 + 2, which
+ * is a normal ragged last row and needs no special case. Under 600px two
+ * columns split 2 + 2 + 1 and the last tile is alone again, so there the tail
+ * takes the full width — at that width it is a two-across sheet, and a lone
+ * half-width tile at the bottom of it looks like a mistake rather than a row. */
+@media (max-width: 889px) {
+  .key-readings-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 599px) {
+  .key-readings-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .key-readings-grid > :last-child:nth-child(odd) { grid-column: 1 / -1; }
+}
+
+/* Under 348px a two-column split cannot hold the readable floor: two 150px
+ * tiles plus the gap need 316px of content, and the 16px gutters take 32 of the
+ * viewport, so 348px is the last width that works. 390px phones keep two —
+ * collapsing them to a single column made the sheet three screens tall for no
+ * gain, and a tile is still 175px wide there. */
+@media (max-width: 347px) {
+  .key-readings-grid { grid-template-columns: minmax(0, 1fr); }
+  .key-readings-grid > :last-child:nth-child(odd) { grid-column: auto; }
 }
 /* The cards used to be a single row, so they carried a right border and a
  * `:last-child { border-right: 0 }` to close the strip. A fluid grid has no
@@ -615,7 +647,10 @@ td {
   background: var(--paper-2);
 }
 .official-warning-message { margin-top: var(--space-2); color: var(--ink-2); font-size: var(--text-base); max-width: 68ch; }
-.official-cap-panel { margin-top: var(--space-4); }
+/* No margin of its own: the panel is one block in the dashboard column, and
+ * its wrapper already sits on the shared gap. An extra 16px here stacked with
+ * the column gap to produce a 44px hole in the middle of the page. */
+.official-cap-panel { margin: 0; }
 .official-cap-heading { font-size: var(--text-lg); font-weight: 500; color: var(--ink); }
 .official-cap-description { margin-top: var(--space-2); color: var(--ink-2); font-size: var(--text-base); }
 .official-cap-instruction {
@@ -914,7 +949,6 @@ td {
 .retired-section-dismiss:focus-visible { outline: var(--rule-hair) solid var(--focus); outline-offset: 2px; }
 
 /* The dashboard's official-warning panel, mounted where the Reports count points. */
-.dashboard-official-warnings { margin-top: var(--space-4); }
 
 .uploaded-alert {
   --alert-state: var(--rule-2);
@@ -1440,10 +1474,16 @@ td {
 .uploaded-alert h2 { font-size: var(--text-3xl); letter-spacing: -0.035em; }
 .uploaded-alert-summary { max-width: 72ch; line-height: 1.6; }
 .uploaded-alert-footer { margin-top: var(--space-5); }
-.dashboard-section-heading { display: flex; align-items: end; justify-content: space-between; gap: var(--space-3); margin-top: var(--space-2); }
-.dashboard-section-heading h2 { margin-top: var(--space-1); font-family: var(--font-body); font-size: var(--text-xl); font-weight: 600; letter-spacing: -0.025em; text-transform: none; }
+/* A heading belongs to the sheet below it, not to the section above: the
+ * negative bottom margin cancels one step of the column gap so the pair reads as
+ * one block, and every other gap on the page stays on the one 24px rhythm. */
+/* The heading owns the sheet below it. The column gap here is one 20px step;
+ * cancelling 12 of it leaves an 8px tie between heading and sheet, so the two
+ * read as one block without touching the rhythm between the sections. */
+.dashboard-section-heading { display: flex; align-items: end; justify-content: space-between; gap: var(--space-3); margin-bottom: calc(-1 * var(--space-3)); }
+.dashboard-section-heading h2 { margin: 0; font-family: var(--font-body); font-size: var(--text-xl); font-weight: 600; letter-spacing: -0.025em; text-transform: none; }
 .dashboard-section-heading > span { color: var(--muted); font-size: var(--text-xs); }
-.key-readings-grid { margin-top: calc(-1 * var(--space-2)); }
+
 .uploaded-tile { min-height: 152px; padding: var(--space-5); }
 .uploaded-tile-heading svg { color: var(--accent-text); }
 .uploaded-tile-value { font-size: var(--text-4xl); font-weight: 600; letter-spacing: -0.025em; }
