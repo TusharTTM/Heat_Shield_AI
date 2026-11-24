@@ -105,10 +105,22 @@ export default function Dashboard() {
 
     {(warning || airWarning) && <p className="dashboard-stale-note" role="status">{warning ?? airWarning}</p>}
 
-    {/* Urgent first. When an official warning is active it leads the page and
-        the model screening follows; when none is active the screening banner
-        is the top answer, because "no official warning" is not the same as
-        "nothing to do". Either way the two are never merged into one claim. */}
+    {/* The order is the answer, most important first:
+     *
+     *   1. the screening verdict (and an active official warning above it);
+     *   2. what to actually do about it — the precautions;
+     *   3. the plan for the coming hours;
+     *   4. the readings those three are derived from;
+     *   5. navigation and secondary links last.
+     *
+     * The readings used to sit above the precautions. That is the wrong way
+     * round: a reading is the evidence behind a verdict, not the verdict, and a
+     * visitor who stops after one screen should have the actions, not five
+     * numbers they have to interpret themselves.
+     *
+     * When an official warning is active it leads even the verdict, and the two
+     * are never merged into one claim — "no official warning" is not the same as
+     * "nothing to do". */}
     {latestOfficialAlert && (
       <div id="official-warnings" className="scroll-section dashboard-official-warnings is-urgent">
         <OfficialAlertsPanel state={officialAlerts} />
@@ -148,6 +160,30 @@ export default function Dashboard() {
         <OfficialAlertsPanel state={officialAlerts} />
       </div>
     )}
+
+    <section className="scroll-section uploaded-panel" aria-labelledby="dashboard-suggestions-title">
+      <div className="uploaded-panel-heading">
+        <div>
+          <span className="uploaded-eyebrow">{t('dash.suggestionsKicker')}</span>
+          <h2 id="dashboard-suggestions-title">{t('dash.suggestionsTitle')}</h2>
+        </div>
+      </div>
+      {suggestions.length > 0 ? <ul className="uploaded-suggestion-list" aria-label={`Suggested precautions for ${selected.name}`}>
+        {suggestions.slice(0, 3).map((task) => {
+          const completed = completedIds.includes(task.id)
+          return <li key={task.id} className={completed ? 'completed' : ''}>
+            <label>
+              <input type="checkbox" checked={completed} onChange={() => toggleTask(task.id)} />
+              <span className="uploaded-checkmark" aria-hidden="true"><Check size={16} /></span>
+              <span className="uploaded-suggestion-copy">
+                <span className="uploaded-suggestion-title">{task.title}</span>
+                <small>{task.level ? `${task.level[0].toUpperCase()}${task.level.slice(1)} screening` : 'Unassessed'}</small>
+              </span>
+            </label>
+          </li>
+        })}
+      </ul> : <p className="uploaded-empty-copy">{t('dash.suggestionsEmpty')}</p>}
+    </section>
 
     <section className="scroll-section upcoming-risk" aria-labelledby="upcoming-risk-title">
       <div className="upcoming-risk-heading">
@@ -196,29 +232,6 @@ export default function Dashboard() {
       )}
     </nav>
 
-    <section className="scroll-section uploaded-panel" aria-labelledby="dashboard-suggestions-title">
-      <div className="uploaded-panel-heading">
-        <div>
-          <span className="uploaded-eyebrow">{t('dash.suggestionsKicker')}</span>
-          <h2 id="dashboard-suggestions-title">{t('dash.suggestionsTitle')}</h2>
-        </div>
-      </div>
-      {suggestions.length > 0 ? <ul className="uploaded-suggestion-list" aria-label={`Suggested precautions for ${selected.name}`}>
-        {suggestions.slice(0, 3).map((task) => {
-          const completed = completedIds.includes(task.id)
-          return <li key={task.id} className={completed ? 'completed' : ''}>
-            <label>
-              <input type="checkbox" checked={completed} onChange={() => toggleTask(task.id)} />
-              <span className="uploaded-checkmark" aria-hidden="true"><Check size={16} /></span>
-              <span className="uploaded-suggestion-copy">
-                <span className="uploaded-suggestion-title">{task.title}</span>
-                <small>{task.level ? `${task.level[0].toUpperCase()}${task.level.slice(1)} screening` : 'Unassessed'}</small>
-              </span>
-            </label>
-          </li>
-        })}
-      </ul> : <p className="uploaded-empty-copy">{t('dash.suggestionsEmpty')}</p>}
-    </section>
 
   </div>
 }

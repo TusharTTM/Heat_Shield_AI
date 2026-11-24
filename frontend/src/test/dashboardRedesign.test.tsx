@@ -43,6 +43,54 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks())
 
 describe('Uploaded Heat Shield dashboard', () => {
+  it('puts the most important thing first, and the readings below the actions', async () => {
+    // Order is part of the product, not styling. A visitor who reads one screen
+    // should get the verdict and what to do about it — not five numbers they
+    // have to interpret themselves.
+    renderDashboard()
+    expect(await screen.findByRole('heading', { name: 'Temperature' })).toBeInTheDocument()
+
+    // jsdom reports every rect as 0, so assert on document order — the same
+    // sequence the browser lays out, without depending on geometry. The
+    // `is-revealed` state class is stripped: it is runtime state, not identity.
+    const docOrder = [...document.querySelectorAll('.scroll-section')].map(
+      (el) => (el.id || el.className.replace('scroll-section', '').replace('is-revealed', '').trim()).replace(/\s+/g, ' '),
+    )
+    const at = (needle: string) => docOrder.findIndex((k) => k.includes(needle))
+    const verdict = at('situation-alert')
+    const suggestions = at('uploaded-panel')
+    const plan = at('upcoming-risk')
+    const readings = at('key-readings-grid')
+    const shortcuts = at('dashboard-shortcuts')
+    const overview = at('dashboard-overview')
+
+    for (const i of [verdict, suggestions, plan, readings, shortcuts]) expect(i).toBeGreaterThanOrEqual(0)
+
+    // 1. The page title and city picker stay at the top; the verdict is the
+    //    first thing with substance on it.
+    expect(overview).toBe(0)
+    expect(verdict).toBe(overview + 1)
+    // 2. Then what to do about it.
+    expect(suggestions).toBeGreaterThan(verdict)
+    // 3. Then the plan for the coming hours.
+    expect(plan).toBeGreaterThan(suggestions)
+    // 4. The readings are the evidence behind those three, so they follow.
+    expect(readings).toBeGreaterThan(plan)
+    // 5. Navigation last.
+    expect(shortcuts).toBeGreaterThan(readings)
+  })
+
+  it('keeps the precautions out of the readings grid', async () => {
+    // The grid is a single glanceable set of measurements, and is revealed as one
+    // sheet. An action list inside it would break both.
+    renderDashboard()
+    expect(await screen.findByRole('heading', { name: 'Temperature' })).toBeInTheDocument()
+    const grid = document.querySelector('.key-readings-grid')!
+    expect(within(grid as HTMLElement).queryByRole('heading', { name: /AI suggestions/i })).toBeNull()
+    expect(document.querySelectorAll('.uploaded-panel').length).toBe(1)
+  })
+
+
   it('shows the situation alert, five readings, and shortcuts outside the grid', async () => {
     renderDashboard()
 
